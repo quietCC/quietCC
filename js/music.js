@@ -1,0 +1,1 @@
+document.write('\<script id="myhk" src="https://player.lmih.cn/player/js/player.js" key="157888126354" m="1"></script>');

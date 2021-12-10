@@ -1,0 +1,407 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flink-DataStream流处理算子 | 抚今人</title><meta name="keywords" content="Flink"><meta name="author" content="抚今人"><meta name="copyright" content="抚今人"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Apache Flink是一个框架和分布式处理引擎, 对于有界流和无界流进行状态计算.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink-DataStream流处理算子">
+<meta property="og:url" content="http://example.com/2010/12/12/Flink-DataStream%E6%B5%81%E5%A4%84%E7%90%86%E7%AE%97%E5%AD%90/index.html">
+<meta property="og:site_name" content="抚今人">
+<meta property="og:description" content="Apache Flink是一个框架和分布式处理引擎, 对于有界流和无界流进行状态计算.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png">
+<meta property="article:published_time" content="2010-12-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-11-19T08:18:49.206Z">
+<meta property="article:author" content="抚今人">
+<meta property="article:tag" content="Flink">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://example.com/2010/12/12/Flink-DataStream%E6%B5%81%E5%A4%84%E7%90%86%E7%AE%97%E5%AD%90/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"top-center"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-11-19 16:18:49'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    })(window)</script><script src="https://myhkw.cn/player/js/jquery.min.js" type="text/javascript"></script><link rel="stylesheet" href="/css/icon.css" media="defer" onload="this.media='all'"/><link rel="stylesheet" href="/css/custom.css"/><meta name="generator" content="Hexo 5.4.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">44</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">34</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/index.html"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-book"></i><span> 类别</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page" href="/cinemas/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/bangumis/"><i class="fa-fw fas fa-video"></i><span> 追番</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">抚今人</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/index.html"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-book"></i><span> 类别</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page" href="/cinemas/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/bangumis/"><i class="fa-fw fas fa-video"></i><span> 追番</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Flink-DataStream流处理算子</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2010-12-11T16:00:00.000Z" title="发表于 2010-12-12 00:00:00">2010-12-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-11-19T08:18:49.206Z" title="更新于 2021-11-19 16:18:49">2021-11-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/">大数据</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>参考引用链接: </p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">分布式快照算法: Chandy-Lamport</a></li>
+<li>五分钟学大数据微信公众号</li>
+<li>尚硅谷大数据学习文档</li>
+<li>Flink1.13官方文档</li>
+</ul>
+<p>程序执行流程图</p>
+<pre class="mermaid">graph LR
+    environment --> source --> transform --> sink</pre>
+<h1 id="Environment"><a href="#Environment" class="headerlink" title="Environment"></a>Environment</h1><h2 id="getExecutionEnvironment"><a href="#getExecutionEnvironment" class="headerlink" title="getExecutionEnvironment"></a>getExecutionEnvironment</h2><p>​    创建一个执行环境, 表示当前执行程序的萨湖给你下文, 如果程序是独立调用的, 则此方法返回本地执行环境; 如果从命令行客户端提交到集群, 则此方法返回的是集群的客户端环境</p>
+<p>​    getExecutionEnvironment会根据查询运行的方式返回什么样的运行环境, 是最常用的一种创建执行环境</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecutionEnvironment env = ExecutionEnvironment.getExecutionment();</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br></pre></td></tr></table></figure>
+
+<p>​    当没有设置并行度的时候, 以<code>fink-conf.yaml</code>中的配置为准, 默认的并行度是1</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">parallelism.default:</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="createLocalEnvironment"><a href="#createLocalEnvironment" class="headerlink" title="createLocalEnvironment"></a>createLocalEnvironment</h2><p>​    返回本地执行环境, 需要在调用的时候指定默认的并行度</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LocalStreamEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(<span class="number">1</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="createRemoteEnvironment"><a href="#createRemoteEnvironment" class="headerlink" title="createRemoteEnvironment"></a>createRemoteEnvironment</h2><p>​    返回集群执行环境, 将Jar提交到远程服务器中, 需要在调用的时候指定JobManager的IP和端口号, 并执行要在集群中运行的jar包</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">StreamExecutionEnvionment env = StreamEnvironmentExecution.createRemoteEnvironment(<span class="string">&quot;jobManagerHostName&quot;</span>,<span class="number">6123</span>,<span class="string">&quot;YOURPATH//WordCount.jar&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h1 id="Source"><a href="#Source" class="headerlink" title="Source"></a>Source</h1><p>​    Flink可以使用<code>StreamExecutionEnvironment.addSource(source)</code>来为我们的程序添加数据来源</p>
+<p>​    Flink提供了很多实现好的SourceFunction, 当然我们也可以<strong>通过SourceFunction来定义非并行的Source或者实现.</strong></p>
+<p>​    ParallelSourceFunction接口或者扩展RichParallelSourceFunction来定义并行的Source</p>
+<p>​    FLink在流处理上大概分为四类</p>
+<ul>
+<li>基于本地文件的source</li>
+<li>基于文件的source</li>
+<li>基于网络套接字的source</li>
+<li>自定义的source</li>
+</ul>
+<h1 id="Transform"><a href="#Transform" class="headerlink" title="Transform"></a>Transform</h1><p>用户通过算子能够将一个或者多个DataStream抓换成为新的DataStream, 在应用程序中可以将多个数据转换算子并合并成为一个复杂的数据流拓扑</p>
+<h2 id="数据流转换"><a href="#数据流转换" class="headerlink" title="数据流转换"></a>数据流转换</h2><h3 id="Map"><a href="#Map" class="headerlink" title="Map"></a>Map</h3><p><strong>DataStream</strong> ➡​ <strong>DataStream</strong></p>
+<pre class="mermaid">graph LR
+    A[DataStream] --> DataStream</pre>
+
+<p>Takes one element and products one element, A map function that doubles the values of the stream:</p>
+<blockquote>
+<p>取一个元素并产生一个元素, 下面是map函数将输入流的值进行加倍输出的例子</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">// 设置并行度</span></span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.fromElements(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>)</span><br><span class="line">                <span class="comment">// 泛型分别对应着输入类型和输出类型</span></span><br><span class="line">                .map(<span class="keyword">new</span> MapFunction&lt;Integer, Integer&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Integer <span class="title">map</span><span class="params">(Integer value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> value * <span class="number">2</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Flatmap"><a href="#Flatmap" class="headerlink" title="Flatmap"></a>Flatmap</h3><p><strong>DataStream</strong> ​➡​ <strong>DataStream</strong></p>
+<pre class="mermaid">graph LR
+    A[DataStream] --> DataStream</pre>
+
+<p>Takes one element and products zero, one , or more elements. A flatmap function that splits sentences to words:</p>
+<blockquote>
+<p>取一个元素并产生0个, 1个或者多个元素,  下面是一个flatmap算子将句子拆分为单词的栗子</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">// 设置并行度</span></span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.fromElements(<span class="string">&quot;hello world&quot;</span>, <span class="string">&quot;java python scala&quot;</span>, <span class="string">&quot;hello&quot;</span>, <span class="string">&quot;hello java hello&quot;</span>)</span><br><span class="line">                .flatMap(<span class="keyword">new</span> FlatMapFunction&lt;String, String&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">flatMap</span><span class="params">(String value, Collector&lt;String&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        String[] strings = value.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">                        <span class="keyword">for</span> (String string : strings) &#123;</span><br><span class="line">                            out.collect(string);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h3><p><strong>DataStream</strong> ​➡​ <strong>DataStream</strong></p>
+<pre class="mermaid">graph LR
+    A[DataStream] --> DataStream</pre>
+
+<p>Evaluates a boolean function for each element and retains those for which the function returns true . A filter that filters out zero values:</p>
+<blockquote>
+<p>为每个元素计算一个布尔函数, 保留返回值为true的元素, 下面的filter将值为0的数据进行过滤</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">// 设置并行度</span></span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.fromElements(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">0</span>, <span class="number">56</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">24</span>, <span class="number">0</span>)</span><br><span class="line">                .filter(<span class="keyword">new</span> FilterFunction&lt;Integer&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">filter</span><span class="params">(Integer value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (value != <span class="number">0</span>) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="KeyBy"><a href="#KeyBy" class="headerlink" title="KeyBy"></a>KeyBy</h3><p><strong>DataStream</strong> ​➡​ <strong>KeyedStream</strong></p>
+<pre class="mermaid">graph LR
+    A[DataStream] -->|k1| B[KeyedStream]
+    A -->|k2| C[KeyedStream]
+    A -->|k3| D[KeyedStream]
+    A -->|kn| E[.....]</pre>
+
+<p>logically partitions a stream into disjoint partitions. All records with the same key are assigned to the same partition. Internally , keyBy() is implemented with hash partitioning. There are different ways to specify keys.</p>
+<blockquote>
+<p>在逻辑上将一个流划分为不相交的分区, 所有具有相同的键的记录都会被分配到同一个分区. 在内部, keyBy()是通过hash值实现的, 指定键的方法有很多种</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">// 设置并行度</span></span><br><span class="line">        env.setParallelism(<span class="number">2</span>);</span><br><span class="line">        env.fromElements(<span class="string">&quot;hello world&quot;</span>, <span class="string">&quot;java python scala&quot;</span>, <span class="string">&quot;hello&quot;</span>, <span class="string">&quot;hello java hello&quot;</span>)</span><br><span class="line">                .keyBy(<span class="keyword">new</span> KeySelector&lt;String, Character&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Character <span class="title">getKey</span><span class="params">(String value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> value.charAt(<span class="number">0</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>A type cannot be a key if:</p>
+<ol>
+<li>it is a pojo type but does not override the hashCode() method and relies on the Object.hashCode() implementation.</li>
+<li>it is an array of any type.</li>
+</ol>
+<blockquote>
+<p>在以下的情况下, 类型不能是键: </p>
+<ol>
+<li>它是一种POJO类型, 但是没有覆盖hashCode[]方法并且依赖于Object.hashCode()实现. </li>
+<li>它是任何类型的数组.</li>
+</ol>
+</blockquote>
+<h3 id="Reduce"><a href="#Reduce" class="headerlink" title="Reduce"></a>Reduce</h3><p><strong>KeyedStream</strong> ➡ <strong>DataStream</strong></p>
+<pre class="mermaid">graph LR
+    KeyedStream --> DataStream</pre>
+
+<p>A “rolling” reduce on a  keyed data stream. Combines the current element with the last reduced value and emits the new value.</p>
+<p>A reduce fuction that creates a stream of partial sums.</p>
+<blockquote>
+<p>键控数据流上的数据进行”滚动”减少. 将当前元素与最后减少的值组合并发出新的值</p>
+<p>下面的reduce函数创建部分的流, 单词统计示例</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">// 设置并行度</span></span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.fromElements(<span class="string">&quot;hello world&quot;</span>, <span class="string">&quot;java python scala&quot;</span>, <span class="string">&quot;hello&quot;</span>, <span class="string">&quot;hello java hello&quot;</span>)</span><br><span class="line">                <span class="comment">// 当使用lambda表达式的时候要注意发生泛型擦除的问题, 所以我们对时候lambda的函数后面</span></span><br><span class="line">                <span class="comment">// 追加returns方法指定输出的结果类型</span></span><br><span class="line">                .flatMap(</span><br><span class="line">                        (String in, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) -&gt; &#123;</span><br><span class="line">                            String[] strings = in.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">                            <span class="keyword">for</span> (String string : strings) out.collect(Tuple2.of(string, <span class="number">1</span>));</span><br><span class="line">                        &#125;</span><br><span class="line">                ).returns(Types.TUPLE(Types.STRING, Types.INT))</span><br><span class="line">                <span class="comment">// 以二元组的第一个元素为key</span></span><br><span class="line">                .keyBy(r -&gt; r.f0)</span><br><span class="line">                <span class="comment">// 使用reduce对相同key的每条数据保留一份状态值</span></span><br><span class="line">                .reduce(<span class="keyword">new</span> ReduceFunction&lt;Tuple2&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Tuple2&lt;String, Integer&gt; <span class="title">reduce</span><span class="params">(Tuple2&lt;String, Integer&gt; value1, Tuple2&lt;String, Integer&gt; value2)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> Tuple2.of(</span><br><span class="line">                                value1.f0,</span><br><span class="line">                                value1.f1 + value2.f1</span><br><span class="line">                        );</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>:chestnut:<strong>数字流保存最大值和最小值示例</strong></p>
+<p>自定义source</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IntegerSource</span> <span class="keyword">implements</span> <span class="title">SourceFunction</span>&lt;<span class="title">Integer</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> running = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">private</span> Random random = <span class="keyword">new</span> Random();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(SourceContext&lt;Integer&gt; ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (running) &#123;</span><br><span class="line">            ctx.collect(random.nextInt(<span class="number">1000</span>));</span><br><span class="line">            Thread.sleep(<span class="number">1000L</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">cancel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        running = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Flink Demo</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.addSource(<span class="keyword">new</span> IntegerSource())</span><br><span class="line">                <span class="comment">// 创建tuple, 用于存储最大值和最小值</span></span><br><span class="line">                .map(ele -&gt; Tuple2.of(ele, ele))</span><br><span class="line">                <span class="comment">// 因为存在泛型擦除问题, 所以这里要声明向下游传递的数据类型</span></span><br><span class="line">                .returns(Types.TUPLE(Types.INT, Types.INT))</span><br><span class="line">                <span class="comment">// 放到一个逻辑分区之内进行判断</span></span><br><span class="line">                .keyBy(ele -&gt; <span class="number">1</span>)</span><br><span class="line">                .reduce(<span class="keyword">new</span> ReduceFunction&lt;Tuple2&lt;Integer, Integer&gt;&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Tuple2&lt;Integer, Integer&gt; <span class="title">reduce</span><span class="params">(Tuple2&lt;Integer, Integer&gt; value1, Tuple2&lt;Integer, Integer&gt; value2)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="comment">//value1 代表当前元素, value2 代表上游输出的元素, 是状态保存的一种体现</span></span><br><span class="line">                        <span class="keyword">return</span> Tuple2.of(</span><br><span class="line">                                <span class="comment">//保存最大值</span></span><br><span class="line">                                value1.f0 &gt; value2.f0 ? value1.f0 : value2.f0,</span><br><span class="line">                                <span class="comment">// 保存最小值</span></span><br><span class="line">                                value1.f1 &lt; value2.f1 ? value1.f1 : value2.f1</span><br><span class="line">                        );</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="Sink"><a href="#Sink" class="headerlink" title="Sink"></a>Sink</h1><h1 id="RichFunction"><a href="#RichFunction" class="headerlink" title="RichFunction"></a>RichFunction</h1><p>每一个并行子任务都有自己的声明周期</p>
+<ul>
+<li>open(): 在算子的计算逻辑前执行一次, 适合做初始化的工作, 比如打开链接</li>
+<li>close(): 在算子的计算逻辑执行完毕之后执行一次, 比如关闭链接</li>
+<li>getRuntimeContext(): 用来获取当前算子的上下文信息, 比如当前算子所处的并i性子任务的索引等等</li>
+</ul>
+<p>MapFunction ➡ RichMapFunction</p>
+<p>FilterFunction ➡ RichFilterFunction</p>
+<p>FlatMapFunction ➡ RichFlatMapFunction</p>
+<p>SourceFunction ➡ RichSourceFunction</p>
+<p>SinkFunction ➡ RichSInkFunction</p>
+<h2 id="RichMapFunction"><a href="#RichMapFunction" class="headerlink" title="RichMapFunction"></a>RichMapFunction</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        env.fromElements(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>)</span><br><span class="line">                .map(<span class="keyword">new</span> RichMapFunction&lt;Integer, Integer&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">super</span>.open(parameters);</span><br><span class="line">                        System.out.println(<span class="string">&quot;梦开始的地方&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">super</span>.close();</span><br><span class="line">                        System.out.println(<span class="string">&quot;梦结束了&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Integer <span class="title">map</span><span class="params">(Integer value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> value * value;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br><span class="line">                .print();</span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>🍕<strong>result</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">梦开始的地方</span><br><span class="line">1</span><br><span class="line">4</span><br><span class="line">9</span><br><span class="line">16</span><br><span class="line">梦结束了</span><br></pre></td></tr></table></figure>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">抚今人</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2010/12/12/Flink-DataStream%E6%B5%81%E5%A4%84%E7%90%86%E7%AE%97%E5%AD%90/">http://example.com/2010/12/12/Flink-DataStream%E6%B5%81%E5%A4%84%E7%90%86%E7%AE%97%E5%AD%90/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">抚今人</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Flink/">Flink</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2010/12/12/Flink-CEP/"><img class="prev-cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Flink-CEP</div></div></a></div><div class="next-post pull-right"><a href="/2010/12/12/Flink-Windows%E5%87%BD%E6%95%B0/"><img class="next-cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Flink-Windows函数</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2010/12/12/Flink-CEP/" title="Flink-CEP"><img class="cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2010-12-12</div><div class="title">Flink-CEP</div></div></a></div><div><a href="/2010/12/12/Flink-Windows函数/" title="Flink-Windows函数"><img class="cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2010-12-12</div><div class="title">Flink-Windows函数</div></div></a></div><div><a href="/2010/12/12/Flink-介绍与架构/" title="Flink-介绍与架构"><img class="cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2010-12-12</div><div class="title">Flink-介绍与架构</div></div></a></div><div><a href="/2010/12/12/Flink-知识点/" title="Flink-知识点"><img class="cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2010-12-12</div><div class="title">Flink-知识点</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">抚今人</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">44</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">34</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div></div><a class="button--animated" id="card-info-btn" href="2010/12/12/hello-world/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="tencent://message/?uin=2802849807&amp;Site=&amp;Menu=yes" target="_blank" title="QQ"><i class="iconfont icon-weixin"></i></a><a class="social-icon" href="https://blog.csdn.net/qq_33274506" target="_blank" title="CSDN"><i class="iconfont icon-csdn"></i></a><a class="social-icon" href="https://www.cnblogs.com/muyuqingchenyo/" target="_blank" title="cnblogs"><i class="iconfont icon-cnblogs"></i></a><a class="social-icon" href="https://space.bilibili.com/64912455" target="_blank" title="Bilibili"><i class="iconfont icon-bilibili"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">🎈知道的越多, 不知道的越多<br/>✨笨鸟先飞<br/>🎨终身学习者<br/>🎞摸鱼爱好者<div class="twopeople"><div class="twopeople"><div class="container"style="height:200px;"><canvas class="illo"width="800"height="800"style="max-width: 200px; max-height: 200px; touch-action: none; width: 640px; height: 640px;"></canvas></div><script src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/twopeople1.js"></script><script src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/zdog.dist.js"></script><script id="rendered-js"src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/twopeople.js"></script><style>.twopeople{margin:0;align-items:center;justify-content:center;text-align:center}canvas{display:block;margin:0 auto;cursor:move}</style></div></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Environment"><span class="toc-number">1.</span> <span class="toc-text">Environment</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#getExecutionEnvironment"><span class="toc-number">1.1.</span> <span class="toc-text">getExecutionEnvironment</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#createLocalEnvironment"><span class="toc-number">1.2.</span> <span class="toc-text">createLocalEnvironment</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#createRemoteEnvironment"><span class="toc-number">1.3.</span> <span class="toc-text">createRemoteEnvironment</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Source"><span class="toc-number">2.</span> <span class="toc-text">Source</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Transform"><span class="toc-number">3.</span> <span class="toc-text">Transform</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E8%BD%AC%E6%8D%A2"><span class="toc-number">3.1.</span> <span class="toc-text">数据流转换</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Map"><span class="toc-number">3.1.1.</span> <span class="toc-text">Map</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Flatmap"><span class="toc-number">3.1.2.</span> <span class="toc-text">Flatmap</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Filter"><span class="toc-number">3.1.3.</span> <span class="toc-text">Filter</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#KeyBy"><span class="toc-number">3.1.4.</span> <span class="toc-text">KeyBy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Reduce"><span class="toc-number">3.1.5.</span> <span class="toc-text">Reduce</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Sink"><span class="toc-number">4.</span> <span class="toc-text">Sink</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#RichFunction"><span class="toc-number">5.</span> <span class="toc-text">RichFunction</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#RichMapFunction"><span class="toc-number">5.1.</span> <span class="toc-text">RichMapFunction</span></a></li></ol></li></ol></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png')"><div id="footer-wrap"><div class="copyright">&copy;2018 - 2021  <i id="heartbeat" class="fa fas fa-heartbeat"></i> 抚今人</div><div class="footer_custom_text"><p><a style="margin-inline:5px"target="_blank" href="https://hexo.io/"><img src="https://img.shields.io/badge/Frame-Hexo-blue?style=flat&logo=hexo" title="博客框架为 Hexo" alt="HEXO"></a><a style="margin-inline:5px"target="_blank" href="https://butterfly.js.org/"><img src="https://img.shields.io/badge/Theme-Butterfly-6513df?style=flat&logo=bitdefender" title="主题采用 Butterfly" alt="Butterfly"></a><a style="margin-inline:5px"target="_blank" href="https://www.jsdelivr.com/"><img src="https://img.shields.io/badge/CDN-jsDelivr-orange?style=flat&logo=jsDelivr" title="本站使用 Jsdelivr 为静态资源提供CDN加速" alt="Jsdelivr"></a><a style="margin-inline:5px"target="_blank" href="https://github.com/"><img src="https://img.shields.io/badge/Source-Github-d021d6?style=flat&logo=GitHub" title="本站项目由 GitHub 托管" alt="GitHub"></a><a style="margin-inline:5px"target="_blank"href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" alt="img" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p><br/><a href="icp鏈接"><img class="icp-icon" src="icp圖片"><span>備案號：xxxxxx</span></a></div></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/HCLonely/images@master/others/heartbeat.min.css"></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script>if (document.getElementsByClassName('mermaid').length) {
+  if (window.mermaidJsLoad) mermaid.init()
+  else {
+    getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(() => {
+      window.mermaidJsLoad = true
+      mermaid.initialize({
+        theme: 'butterfly',
+      })
+      true && mermaid.init()
+    })
+  }
+}</script><script>function loadValine () {
+  function initValine () {
+    let initData = {
+      el: '#vcomment',
+      appId: 'rrVhJYSSgni6hMF1byozPOk3-gzGzoHsz',
+      appKey: 'ktwsF7iCBxM5tJTJ8VXh3aeO',
+      placeholder: '记得留下你的昵称和邮箱....可以快速收到回复',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'zh-CN',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    }
+
+    if (true) { 
+      initData.requiredFields= ('nick,mail'.split(','))
+    }
+    
+    if (false) {
+      const otherData = false
+      initData = Object.assign(initData, otherData)
+    }
+    
+    const valine = new Valine(initData)
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js').then(initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.getElementById('vcomment'),loadValine)
+  else setTimeout(loadValine, 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script></div><script src="https://myhkw.cn/api/player/157888126354" id="myhk" key="157888126354" m="1"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = true;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script id="click-show-text" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-show-text.min.js" data-mobile="false" data-text="笨鸟先飞,知道的越多,不知道的越多,今日之今日毕" data-fontsize="15px" data-random="false" async="async"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = [
+  'title',
+  '#config-diff',
+  '#body-wrap',
+  '#rightside-config-hide',
+  '#rightside-config-show',
+  '.js-pjax'
+]
+
+if (false) {
+  pjaxSelectors.unshift('meta[property="og:image"]', 'meta[property="og:title"]', 'meta[property="og:url"]')
+}
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  if (typeof gtag === 'function') {
+    gtag('config', '', {'page_path': window.location.pathname});
+  }
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // Analytics
+  if (false) {
+    MtaH5.pgv()
+  }
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+
+document.addEventListener('pjax:send', function () {
+  typeof preloader === 'object' && preloader.initLoading()
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
