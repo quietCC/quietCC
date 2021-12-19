@@ -1,0 +1,407 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Interview-Kafka | 抚今人</title><meta name="keywords" content="Kafka"><meta name="author" content="抚今人"><meta name="copyright" content="抚今人"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="基本信息组成生产者,  消费者,  broker,  zk(broker ids, controller, isr)  每一个broker都有一个controller  安装多少台2 * (生产者峰值生产速率 * 副本 &#x2F;100)+1 压测生产者峰值生产速率, 消费者峰值消费速率 副本默认1个, 设置为2个 副本多的好处, 提高可靠性, 坏处是降低了效率 速率100万日活 * 100条 &#x3D; 1亿">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Interview-Kafka">
+<meta property="og:url" content="http://example.com/2010/12/12/Interview-Kafka/index.html">
+<meta property="og:site_name" content="抚今人">
+<meta property="og:description" content="基本信息组成生产者,  消费者,  broker,  zk(broker ids, controller, isr)  每一个broker都有一个controller  安装多少台2 * (生产者峰值生产速率 * 副本 &#x2F;100)+1 压测生产者峰值生产速率, 消费者峰值消费速率 副本默认1个, 设置为2个 副本多的好处, 提高可靠性, 坏处是降低了效率 速率100万日活 * 100条 &#x3D; 1亿">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png">
+<meta property="article:published_time" content="2010-12-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-12-16T03:25:38.805Z">
+<meta property="article:author" content="抚今人">
+<meta property="article:tag" content="Kafka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://example.com/2010/12/12/Interview-Kafka/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"top-center"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-12-16 11:25:38'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    })(window)</script><script src="https://myhkw.cn/player/js/jquery.min.js" type="text/javascript"></script><link rel="stylesheet" href="/css/icon.css" media="defer" onload="this.media='all'"/><link rel="stylesheet" href="/css/custom.css"/><meta name="generator" content="Hexo 5.4.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">56</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">40</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/index.html"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-book"></i><span> 类别</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page" href="/cinemas/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/bangumis/"><i class="fa-fw fas fa-video"></i><span> 追番</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">抚今人</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/index.html"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-book"></i><span> 类别</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page" href="/cinemas/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/bangumis/"><i class="fa-fw fas fa-video"></i><span> 追番</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Interview-Kafka</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2010-12-11T16:00:00.000Z" title="发表于 2010-12-12 00:00:00">2010-12-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-12-16T03:25:38.805Z" title="更新于 2021-12-16 11:25:38">2021-12-16</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Interview/">Interview</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h1><h2 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h2><p>生产者,  消费者,  broker,  zk(broker ids, controller, isr)</p>
+<blockquote>
+<p>每一个broker都有一个controller</p>
+</blockquote>
+<h2 id="安装多少台"><a href="#安装多少台" class="headerlink" title="安装多少台"></a>安装多少台</h2><p>2 * (生产者峰值生产速率 * 副本 /100)+1</p>
+<h2 id="压测"><a href="#压测" class="headerlink" title="压测"></a>压测</h2><p>生产者峰值生产速率, 消费者峰值消费速率</p>
+<h2 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h2><p>默认1个, 设置为2个</p>
+<p>副本多的好处, 提高可靠性, 坏处是降低了效率</p>
+<h2 id="速率"><a href="#速率" class="headerlink" title="速率"></a>速率</h2><p>100万日活 * 100条 = 1亿</p>
+<p>1亿/(24 * 3600) = 1150条/s    每条1K,  1m/s</p>
+<p>1亿 * 1k = 100G</p>
+<p>1000万 * 1k = 10G</p>
+<p>100万 * 1k = 1G</p>
+<h2 id="是否做了监控"><a href="#是否做了监控" class="headerlink" title="是否做了监控"></a>是否做了监控</h2><p>eagle,  kafka manager(新版本要求jdk14)</p>
+<blockquote>
+<p>如果是自己研发的, 仰视大佬</p>
+</blockquote>
+<h2 id="分区设置为多少"><a href="#分区设置为多少" class="headerlink" title="分区设置为多少"></a>分区设置为多少</h2><p>期望的吞吐量  t</p>
+<p>生产者峰值生产速率  tp  20m/s</p>
+<p>消费者峰值消费速率  tc  40m/s</p>
+<p>分区数 = t /min(tp, tc) = 100/20 = 5</p>
+<blockquote>
+<p>小公司为 3-5个分区</p>
+</blockquote>
+<h2 id="生产者-gt-broker"><a href="#生产者-gt-broker" class="headerlink" title="生产者 =&gt; broker"></a>生产者 =&gt; broker</h2><ol>
+<li><p>指定分区, 按照指定的分区</p>
+</li>
+<li><p>没有指定分区, 指定了key, 按照可以的hash值%上分区数</p>
+</li>
+<li><p>没有key, 没有指定分区</p>
+<p>粘性分区, 随机选择一个分区, 达到批次或者linger.ms()的时候, 切换下一个分区, 下一个分区不会是上一个分区</p>
+</li>
+</ol>
+<h2 id="broker-gt-消费者"><a href="#broker-gt-消费者" class="headerlink" title="broker =&gt; 消费者"></a>broker =&gt; 消费者</h2><ol>
+<li><p>range</p>
+<p>10个分区            三个消费者</p>
+<p>0  1  2  3                数据倾斜</p>
+<p>4  5  6 </p>
+<p>7  8  9</p>
+<blockquote>
+<p>45秒以内</p>
+<p>0  1  2  3  7  8  9</p>
+<p>4  5  6 </p>
+<p>45秒以后</p>
+<p>0  1  2  3  4 </p>
+<p>5  6  7  8  9</p>
+</blockquote>
+</li>
+<li><p>roundrobin  轮询</p>
+<p>10个分区            三个消费者</p>
+<p>0  3  6  9        </p>
+<p>1  4  7</p>
+<p>2  5  8</p>
+<blockquote>
+<p>45秒以后</p>
+<p>0  3  6  9  2  8        </p>
+<p>1  4  7  5</p>
+</blockquote>
+</li>
+<li><p>粘性</p>
+<p>10个分区            三个消费者</p>
+<p>尽可能的均分        3 3 4</p>
+<p>0  3  5 </p>
+<p>2  6  9</p>
+<p>1  4  7  8</p>
+<blockquote>
+<p>45秒以内挂了</p>
+<p>0  3  5  1  7 </p>
+<p>2  6  9  4  8</p>
+</blockquote>
+</li>
+</ol>
+<h1 id="挂了"><a href="#挂了" class="headerlink" title="挂了"></a>挂了</h1><h2 id="起不来了"><a href="#起不来了" class="headerlink" title="起不来了"></a>起不来了</h2><ol>
+<li><p>整个集群瘫痪</p>
+<p>后面的Flume消费不到数据, 影响不大. </p>
+<p>前面的Flume如果采用的是memory channel的话可能会丢失100个event, 影响不大, 如果使用的是kafka channel, 当kafka挂掉之后, 无法发送数据, 没有任何意义, 如果使用的是taildir, 不会发生数据丢失, 当极端情况下可能会造成整个Flume的瘫痪, 但是我们的日志采集服务器日志默认保存30天, 问题不大.</p>
+</li>
+<li><p>一个节点挂了</p>
+<p>3台服务器, 如果存在2个副本的情况下, 可以直接删除节点, 没有任何问题, 之后通过服役和退役.</p>
+</li>
+</ol>
+<h2 id="节点没了"><a href="#节点没了" class="headerlink" title="节点没了"></a>节点没了</h2><p>只要副本是2, 一切好说. 如果是1, 需要带着历史数据启动. 服役退役</p>
+<h1 id="丢了"><a href="#丢了" class="headerlink" title="丢了"></a>丢了</h1><p>ack 0 : 生产者发送的数据不需要应答, 可靠性低, 效率高, 生产环境几乎不用</p>
+<p>ack 1 : 生产者发送过来的数据leader 应答, 可靠性一般, 效率一般</p>
+<p>ack -1: 生产者发送过来的数据 leader + irs队列中 follower应答</p>
+<p>​            leader 0 [0,1]</p>
+<p>​            isr默认保存的值, 1 -&gt; 设置为大于等于2</p>
+<p>​            副本数量大于等于2</p>
+<h1 id="重复了"><a href="#重复了" class="headerlink" title="重复了"></a>重复了</h1><h2 id="生产者-gt-Broker"><a href="#生产者-gt-Broker" class="headerlink" title="生产者  ==&gt; Broker"></a>生产者  ==&gt; Broker</h2><p>幂等性就是指Producer不论向Broker发送多少次重复数据, Broker端都只会持久化一条, 保证了不重复, 结合上至少一次, 就构成了Kafka的精准一次消费</p>
+<blockquote>
+<p><strong>精准一次消费:</strong> </p>
+<p><code>幂等性</code>+ <code>至少一次(ack = -1 + 分区副本数 &gt;= 2 + ISR最小副本数量 &gt;=2)</code></p>
+</blockquote>
+<p>生产者向broker发送消息是通过</p>
+<p>判断的key (pid (每次启动会更新一次),  分区,  序列号)</p>
+<p>幂等性    =&gt; 指的是单分区, 但绘画数据不丢不重复</p>
+<p>事务        =&gt; </p>
+<ul>
+<li>初始化事务</li>
+<li>开启事务</li>
+<li>提交事务</li>
+<li>终止事务</li>
+<li>offset提交事务</li>
+</ul>
+<h2 id="Broker-gt-消费者"><a href="#Broker-gt-消费者" class="headerlink" title="Broker  ==&gt; 消费者"></a>Broker  ==&gt; 消费者</h2><p>事务</p>
+<h1 id="积压了"><a href="#积压了" class="headerlink" title="积压了"></a>积压了</h1><ol>
+<li><p>增加分区数量</p>
+<blockquote>
+<p>bin/kafka-topic.sh –bootstrap-server Hadoop102:9092 –alter –topic first  –partitions  6</p>
+</blockquote>
+</li>
+<li><p>kafka的分区增加了, 但是对应的消费者并没有增加, 这里我们要增加对应cpu数量, 和kafka的分区数相对应, 进行消费数据</p>
+</li>
+<li><p>调高消费者每批次抓取条数大小, 默认为500条, 默认批次大小为55m, 可以尝试提高批次大小和处理批次的条数, 增加吞吐量.</p>
+</li>
+</ol>
+<h1 id="乱序了"><a href="#乱序了" class="headerlink" title="乱序了"></a>乱序了</h1><ul>
+<li><p>kafka  1.x</p>
+<p>不需要考虑是否开启幂等性</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection = 1</span><br></pre></td></tr></table></figure></li>
+<li><p>kafka  1.x以后的版本</p>
+<p>在未开启幂等性的情况下, 和1.x的版本一样处理</p>
+<p>在开启幂等性的情况下, 会缓存producer发来的最近5个request的数据</p>
+<p>需要设置缓存的请求个数小于等于5个, 会在服务器端从新排序</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection # 设置参数小于等于5</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="做了哪些优化"><a href="#做了哪些优化" class="headerlink" title="做了哪些优化"></a>做了哪些优化</h1><h1 id="杂七杂八"><a href="#杂七杂八" class="headerlink" title="杂七杂八"></a>杂七杂八</h1><h1 id="提高吞吐量"><a href="#提高吞吐量" class="headerlink" title="提高吞吐量"></a>提高吞吐量</h1><h1 id="为什么能做到高校读写"><a href="#为什么能做到高校读写" class="headerlink" title="为什么能做到高校读写"></a>为什么能做到高校读写</h1></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">抚今人</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2010/12/12/Interview-Kafka/">http://example.com/2010/12/12/Interview-Kafka/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">抚今人</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Kafka/">Kafka</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2010/12/12/Interview-Leetcode/"><img class="prev-cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Interview-FLink</div></div></a></div><div class="next-post pull-right"><a href="/2010/12/12/Interview-Linux/"><img class="next-cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Interview-Linux</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2010/12/12/待补充-Kafka/" title="Kafka"><img class="cover" src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2010-12-12</div><div class="title">Kafka</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">抚今人</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">56</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">40</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div></div><a class="button--animated" id="card-info-btn" href="2010/12/12/hello-world/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="tencent://message/?uin=2802849807&amp;Site=&amp;Menu=yes" target="_blank" title="QQ"><i class="iconfont icon-weixin"></i></a><a class="social-icon" href="https://blog.csdn.net/qq_33274506" target="_blank" title="CSDN"><i class="iconfont icon-csdn"></i></a><a class="social-icon" href="https://www.cnblogs.com/muyuqingchenyo/" target="_blank" title="cnblogs"><i class="iconfont icon-cnblogs"></i></a><a class="social-icon" href="https://space.bilibili.com/64912455" target="_blank" title="Bilibili"><i class="iconfont icon-bilibili"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">🎈知道的越多, 不知道的越多<br/>✨笨鸟先飞<br/>🎨终身学习者<br/>🎞摸鱼爱好者<div class="twopeople"><div class="twopeople"><div class="container"style="height:200px;"><canvas class="illo"width="800"height="800"style="max-width: 200px; max-height: 200px; touch-action: none; width: 640px; height: 640px;"></canvas></div><script src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/twopeople1.js"></script><script src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/zdog.dist.js"></script><script id="rendered-js"src="https://cdn.jsdelivr.net/gh/Justlovesmile/CDN/js/twopeople.js"></script><style>.twopeople{margin:0;align-items:center;justify-content:center;text-align:center}canvas{display:block;margin:0 auto;cursor:move}</style></div></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%9F%BA%E6%9C%AC%E4%BF%A1%E6%81%AF"><span class="toc-number">1.</span> <span class="toc-text">基本信息</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%84%E6%88%90"><span class="toc-number">1.1.</span> <span class="toc-text">组成</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%89%E8%A3%85%E5%A4%9A%E5%B0%91%E5%8F%B0"><span class="toc-number">1.2.</span> <span class="toc-text">安装多少台</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8E%8B%E6%B5%8B"><span class="toc-number">1.3.</span> <span class="toc-text">压测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%AF%E6%9C%AC"><span class="toc-number">1.4.</span> <span class="toc-text">副本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%80%9F%E7%8E%87"><span class="toc-number">1.5.</span> <span class="toc-text">速率</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%98%AF%E5%90%A6%E5%81%9A%E4%BA%86%E7%9B%91%E6%8E%A7"><span class="toc-number">1.6.</span> <span class="toc-text">是否做了监控</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E5%8C%BA%E8%AE%BE%E7%BD%AE%E4%B8%BA%E5%A4%9A%E5%B0%91"><span class="toc-number">1.7.</span> <span class="toc-text">分区设置为多少</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%9F%E4%BA%A7%E8%80%85-gt-broker"><span class="toc-number">1.8.</span> <span class="toc-text">生产者 &#x3D;&gt; broker</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#broker-gt-%E6%B6%88%E8%B4%B9%E8%80%85"><span class="toc-number">1.9.</span> <span class="toc-text">broker &#x3D;&gt; 消费者</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%8C%82%E4%BA%86"><span class="toc-number">2.</span> <span class="toc-text">挂了</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B5%B7%E4%B8%8D%E6%9D%A5%E4%BA%86"><span class="toc-number">2.1.</span> <span class="toc-text">起不来了</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8A%82%E7%82%B9%E6%B2%A1%E4%BA%86"><span class="toc-number">2.2.</span> <span class="toc-text">节点没了</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%A2%E4%BA%86"><span class="toc-number">3.</span> <span class="toc-text">丢了</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%87%8D%E5%A4%8D%E4%BA%86"><span class="toc-number">4.</span> <span class="toc-text">重复了</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%9F%E4%BA%A7%E8%80%85-gt-Broker"><span class="toc-number">4.1.</span> <span class="toc-text">生产者  &#x3D;&#x3D;&gt; Broker</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Broker-gt-%E6%B6%88%E8%B4%B9%E8%80%85"><span class="toc-number">4.2.</span> <span class="toc-text">Broker  &#x3D;&#x3D;&gt; 消费者</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%A7%AF%E5%8E%8B%E4%BA%86"><span class="toc-number">5.</span> <span class="toc-text">积压了</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B9%B1%E5%BA%8F%E4%BA%86"><span class="toc-number">6.</span> <span class="toc-text">乱序了</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%81%9A%E4%BA%86%E5%93%AA%E4%BA%9B%E4%BC%98%E5%8C%96"><span class="toc-number">7.</span> <span class="toc-text">做了哪些优化</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9D%82%E4%B8%83%E6%9D%82%E5%85%AB"><span class="toc-number">8.</span> <span class="toc-text">杂七杂八</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%8F%90%E9%AB%98%E5%90%9E%E5%90%90%E9%87%8F"><span class="toc-number">9.</span> <span class="toc-text">提高吞吐量</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%83%BD%E5%81%9A%E5%88%B0%E9%AB%98%E6%A0%A1%E8%AF%BB%E5%86%99"><span class="toc-number">10.</span> <span class="toc-text">为什么能做到高校读写</span></a></li></ol></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/613932.png')"><div id="footer-wrap"><div class="copyright">&copy;2018 - 2021  <i id="heartbeat" class="fa fas fa-heartbeat"></i> 抚今人</div><div class="footer_custom_text"><p><a style="margin-inline:5px"target="_blank" href="https://hexo.io/"><img src="https://img.shields.io/badge/Frame-Hexo-blue?style=flat&logo=hexo" title="博客框架为 Hexo" alt="HEXO"></a><a style="margin-inline:5px"target="_blank" href="https://butterfly.js.org/"><img src="https://img.shields.io/badge/Theme-Butterfly-6513df?style=flat&logo=bitdefender" title="主题采用 Butterfly" alt="Butterfly"></a><a style="margin-inline:5px"target="_blank" href="https://www.jsdelivr.com/"><img src="https://img.shields.io/badge/CDN-jsDelivr-orange?style=flat&logo=jsDelivr" title="本站使用 Jsdelivr 为静态资源提供CDN加速" alt="Jsdelivr"></a><a style="margin-inline:5px"target="_blank" href="https://github.com/"><img src="https://img.shields.io/badge/Source-Github-d021d6?style=flat&logo=GitHub" title="本站项目由 GitHub 托管" alt="GitHub"></a><a style="margin-inline:5px"target="_blank"href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" alt="img" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/HCLonely/images@master/others/heartbeat.min.css"></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script>if (document.getElementsByClassName('mermaid').length) {
+  if (window.mermaidJsLoad) mermaid.init()
+  else {
+    getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(() => {
+      window.mermaidJsLoad = true
+      mermaid.initialize({
+        theme: 'butterfly',
+      })
+      true && mermaid.init()
+    })
+  }
+}</script><script>function loadValine () {
+  function initValine () {
+    let initData = {
+      el: '#vcomment',
+      appId: 'rrVhJYSSgni6hMF1byozPOk3-gzGzoHsz',
+      appKey: 'ktwsF7iCBxM5tJTJ8VXh3aeO',
+      placeholder: '记得留下你的昵称和邮箱....可以快速收到回复',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'zh-CN',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    }
+
+    if (true) { 
+      initData.requiredFields= ('nick,mail'.split(','))
+    }
+    
+    if (false) {
+      const otherData = false
+      initData = Object.assign(initData, otherData)
+    }
+    
+    const valine = new Valine(initData)
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js').then(initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.getElementById('vcomment'),loadValine)
+  else setTimeout(loadValine, 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script></div><script src="https://myhkw.cn/api/player/157888126354" id="myhk" key="157888126354" m="1"></script><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-fluttering-ribbon.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = true;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = [
+  'title',
+  '#config-diff',
+  '#body-wrap',
+  '#rightside-config-hide',
+  '#rightside-config-show',
+  '.js-pjax'
+]
+
+if (false) {
+  pjaxSelectors.unshift('meta[property="og:image"]', 'meta[property="og:title"]', 'meta[property="og:url"]')
+}
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  if (typeof gtag === 'function') {
+    gtag('config', '', {'page_path': window.location.pathname});
+  }
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // Analytics
+  if (false) {
+    MtaH5.pgv()
+  }
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+
+document.addEventListener('pjax:send', function () {
+  typeof preloader === 'object' && preloader.initLoading()
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
