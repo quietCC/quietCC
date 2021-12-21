@@ -168,6 +168,31 @@
     
     
     <entry>
+      <title>Flink-Windows函数</title>
+      <link href="/2010/12/12/Flink-Windows%E5%87%BD%E6%95%B0/"/>
+      <url>/2010/12/12/Flink-Windows%E5%87%BD%E6%95%B0/</url>
+      
+        <content type="html"><![CDATA[<p>参考引用链接: </p><ul><li><a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">分布式快照算法: Chandy-Lamport</a></li><li>五分钟学大数据微信公众号</li><li>尚硅谷大数据学习文档</li><li>Flink1.13官方文档</li></ul><h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>windows are at the heart of processing infinite streams. Windows split the stream into “buckets” of finite size, over which we can apply computations. This document focuses on how windowing is performed in Flink and how the programmer can benefit to the maximum from its offered functitonality.</p><p>The general structure if w windowed Flink program is presented below, The first snippet refers to keyed streams, while the second to non-keyed ones. As one can see, the only difference is the keyBy(…) call for the keyed streams and the window(…) which becomes windowAll(…) for non-keyed streams, This is also going to serve as a roadmap for the rest of the page.</p><blockquote><p>windows是处理无界流的核心. windows将流分成有限大小的”桶”, 我们可以在这些桶上映用计算. 我们重点介绍如何在Flink中执行窗口化以及程序员如何从其提供的功能中获得最大的收益</p><p>窗口化的Flink的程序一般结构如下所示. 第一个片段是指监控流, 第二个指控的是非键控流, 如您所见, 唯一的区别是keyBy(…)对键控流的调用是window, 对于非键控流调用的是windowAll. 这也将作为页面其余部分的路线图</p></blockquote><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">stream</span><br><span class="line">       .keyBy(...)               &lt;-  keyed versus non-keyed windows</span><br><span class="line">       .window(...)              &lt;-  required: <span class="string">&quot;assigner&quot;</span></span><br><span class="line">      [.trigger(...)]            &lt;-  optional: <span class="string">&quot;trigger&quot;</span> (<span class="keyword">else</span> <span class="keyword">default</span> trigger)</span><br><span class="line">      [.evictor(...)]            &lt;-  optional: <span class="string">&quot;evictor&quot;</span> (<span class="keyword">else</span> no evictor)</span><br><span class="line">      [.allowedLateness(...)]    &lt;-  optional: <span class="string">&quot;lateness&quot;</span> (<span class="keyword">else</span> zero)</span><br><span class="line">      [.sideOutputLateData(...)] &lt;-  optional: <span class="string">&quot;output tag&quot;</span> (<span class="keyword">else</span> no side output <span class="keyword">for</span> late data)</span><br><span class="line">       .reduce/aggregate/apply()      &lt;-  required: <span class="string">&quot;function&quot;</span></span><br><span class="line">      [.getSideOutput(...)]      &lt;-  optional: <span class="string">&quot;output tag&quot;</span></span><br></pre></td></tr></table></figure><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">stream</span><br><span class="line">       .windowAll(...)           &lt;-  required: <span class="string">&quot;assigner&quot;</span></span><br><span class="line">      [.trigger(...)]            &lt;-  optional: <span class="string">&quot;trigger&quot;</span> (<span class="keyword">else</span> <span class="keyword">default</span> trigger)</span><br><span class="line">      [.evictor(...)]            &lt;-  optional: <span class="string">&quot;evictor&quot;</span> (<span class="keyword">else</span> no evictor)</span><br><span class="line">      [.allowedLateness(...)]    &lt;-  optional: <span class="string">&quot;lateness&quot;</span> (<span class="keyword">else</span> zero)</span><br><span class="line">      [.sideOutputLateData(...)] &lt;-  optional: <span class="string">&quot;output tag&quot;</span> (<span class="keyword">else</span> no side output <span class="keyword">for</span> late data)</span><br><span class="line">       .reduce/aggregate/apply()      &lt;-  required: <span class="string">&quot;function&quot;</span></span><br><span class="line">      [.getSideOutput(...)]      &lt;-  optional: <span class="string">&quot;output tag&quot;</span></span><br></pre></td></tr></table></figure><p>In the above, the commands in square brackets ([…]) are optional. This reveals that Flink allows you to customize your windowing logic in many different ways so that it best fits your needs.</p><blockquote><p>在上面, 方括号([…])中的命令是可选的, 这表明Flink允许您以多种不同的方式自定义窗口逻辑, 使其最适合您的需求.</p></blockquote><pre class="mermaid">graph LR    subgraph bound1        a[Event] --> b[Event] --> c[Event]    end    subgraph bound2        c --> d[Event] --> e[Event] --> f[Event]    end    f --> g[Event] --> h[Event] --> ...</pre><h1 id="生命周期"><a href="#生命周期" class="headerlink" title="生命周期"></a>生命周期</h1><p>in a nutshell , a window is created as soon as the first element that should belong to this window arrives, and the window is conpletely removed when the time (even or processing time) passes its end timestamp plus the user-specified allowed lastness(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#allowed-lateness">Allowed Lateness</a>). Flink guarantees removal only for time-based windows and not for other types, eg. global windows (see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-assigners">Window Assigners</a>). For Exemple , with an event-time-based windowing strategy that creates non-overlapping(or tumbling) windwos every 5 minutes and has an allowed lateness of 1 min, Flink will create a new window for the interval between 12:00 and 12:05 when the first element with a timestamp that falls into this interval arrives, and it will remove it when the watermark passes the 12:06 timestamp.</p><blockquote><p>简而言之, 当地一个应该属于这个创建口的元素到达的时候, 就会创建一个窗口, 而当时间(事件事件或者处理时间)超过其结束时间戳加上用户指定的允许延迟时, 该窗口就会被完全删除. Flink只保证基于时间的窗口的溢出, 而不保证其他的类型, 例如全局窗口. 例如, 对于一个基于事件事件的窗口策略, 每五分钟吃u昂建一个不重叠(或者翻滚)的窗口, 并且允许分钟的延迟, 当地一个育有时间戳的元素到达这个区间的时候, Flink将为12:00和12:05之间的区间创建一个新的窗口, 并且当水印通过12:06的时间戳的时候, 将会删除</p></blockquote><p>in addition, each window will have a Trigger (see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#triggers">Trigger</a>) and a function(ProcessWindowFunction, ReduceFunction, Or AggregateFunction)(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-functions">Window Functions</a>) attached to it, The function will contain the computation to be applied to the contents of the window , while the Trigger specifies the condition of the windwo , window is considered ready for the function to be applied. A triggering policy might be something like “when the number of elements in the window is more than 4”, or “when the watermark passes the end of the window”. A trigger can also decide to purge a window’s contents any time between its creation and removal , Purging in this case only refers to the elements in the window, and not the window metadata. This means that new data can still be added to that window.</p><blockquote><p>此外, 每一个窗口都会有一个触发器和一个函数(ProcessWindowFunction,ReduceFunction或则AggregateFunction)附加到它. 该函数将包含应用于窗口内容的计算, 而触发器则指定窗口被认为朱安备好应用该函数的条件. 触发策略可能是”当窗口中的元素数量超过4”或者”当水印通过窗口的末端的时候”. 触发器也可以决定窗口创建和删除之间的任何时间清除其中的内容. 在这种情况下, 清除只指窗口中的元素, 而不是窗口的元数据. 这意味着, 新的数据仍然可以被添加到该窗口.</p></blockquote><p>Apart from the above , you can specify an Evictor(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#evictors">Evictor</a>) which will be able to remove elements from the window after the trigger fires and before and/or after the function is applied.</p><p>In the following we go into more deetail for each of the components above. We start with the required parts in the above snippet(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#keyed-vs-non-keyed-windows">Keyed vs Non-Keyed Windows</a>, <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-assigner">Windwo Assigner</a>, and <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-function">Window Function</a>)before moving to the optional ones.</p><blockquote><p>除了上面的这些, 你还可以指定一个Evictor, 他将能够在触发器出发之后, 在函数应用之前和/或者之后从窗口中移除元素.</p><p>在下文中, 我们将会对上述的组件进行更加详细的讨论, 我们从上述片段中的必要部分开始, 然后再转到可选部分</p></blockquote><h1 id="窗口类型"><a href="#窗口类型" class="headerlink" title="窗口类型"></a>窗口类型</h1><ul><li><p>时间窗口</p><p>:one:滚动时间窗口</p><p>:two:滑动时间窗口</p><p>:three:会话窗口</p></li><li><p>计数窗口</p><p>:one:滚动计数窗口</p><p>:two:滑动技术窗口</p></li></ul><h1 id="滚动窗口"><a href="#滚动窗口" class="headerlink" title="滚动窗口"></a>滚动窗口</h1><p>A tumbing windows assigner assigns each element to a window of sprcified window size. Tubming windows have a fixed size and do not overlap. For example, if you specify a tumbling window with a size of 5 minutes, the current window will be evaluated and a new window will be  started every five minutes as illisrated by the following figure.</p><blockquote><p>滚动窗口分配器将每个元素分配到一个指定窗口大小的窗口. 滚动窗口有一个固定的尺寸, 并且不重叠. 例如, 如果你指定一个大小为5分钟的滚动窗口, 当前的窗口将会被评估, 并且每5分钟开始一个新的窗口. 如下图所示.</p></blockquote><p><strong>:red_circle:Flink窗口是左闭右开的, 例如0-5s最后一个时间戳是4999​</strong></p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tumbling-windows.svg"></p><pre class="mermaid">graph LR    A[数据流]    subgraph "key1-window-[0~5]"        F[key2-event] --> G[key2-event]    end    subgraph "key1-window-[0~5]"        D[key1-event] --> E[key1-event]    end    A --> F    A --> D</pre><h1 id="滑动窗口"><a href="#滑动窗口" class="headerlink" title="滑动窗口"></a>滑动窗口</h1>]]></content>
+      
+      
+      <categories>
+          
+          <category> 大数据 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Flink </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>ElasticSearch</title>
       <link href="/2010/12/12/ElasticSearch/"/>
       <url>/2010/12/12/ElasticSearch/</url>
@@ -187,11 +212,11 @@
     
     
     <entry>
-      <title>Flink-Windows函数</title>
-      <link href="/2010/12/12/Flink-Windows%E5%87%BD%E6%95%B0/"/>
-      <url>/2010/12/12/Flink-Windows%E5%87%BD%E6%95%B0/</url>
+      <title>Flink-介绍与架构</title>
+      <link href="/2010/12/12/Flink-%E4%BB%8B%E7%BB%8D%E4%B8%8E%E6%9E%B6%E6%9E%84/"/>
+      <url>/2010/12/12/Flink-%E4%BB%8B%E7%BB%8D%E4%B8%8E%E6%9E%B6%E6%9E%84/</url>
       
-        <content type="html"><![CDATA[<p>参考引用链接: </p><ul><li><a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">分布式快照算法: Chandy-Lamport</a></li><li>五分钟学大数据微信公众号</li><li>尚硅谷大数据学习文档</li><li>Flink1.13官方文档</li></ul><h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>windows are at the heart of processing infinite streams. Windows split the stream into “buckets” of finite size, over which we can apply computations. This document focuses on how windowing is performed in Flink and how the programmer can benefit to the maximum from its offered functitonality.</p><p>The general structure if w windowed Flink program is presented below, The first snippet refers to keyed streams, while the second to non-keyed ones. As one can see, the only difference is the keyBy(…) call for the keyed streams and the window(…) which becomes windowAll(…) for non-keyed streams, This is also going to serve as a roadmap for the rest of the page.</p><blockquote><p>windows是处理无界流的核心. windows将流分成有限大小的”桶”, 我们可以在这些桶上映用计算. 我们重点介绍如何在Flink中执行窗口化以及程序员如何从其提供的功能中获得最大的收益</p><p>窗口化的Flink的程序一般结构如下所示. 第一个片段是指监控流, 第二个指控的是非键控流, 如您所见, 唯一的区别是keyBy(…)对键控流的调用是window, 对于非键控流调用的是windowAll. 这也将作为页面其余部分的路线图</p></blockquote><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">stream</span><br><span class="line">       .keyBy(...)               &lt;-  keyed versus non-keyed windows</span><br><span class="line">       .window(...)              &lt;-  required: <span class="string">&quot;assigner&quot;</span></span><br><span class="line">      [.trigger(...)]            &lt;-  optional: <span class="string">&quot;trigger&quot;</span> (<span class="keyword">else</span> <span class="keyword">default</span> trigger)</span><br><span class="line">      [.evictor(...)]            &lt;-  optional: <span class="string">&quot;evictor&quot;</span> (<span class="keyword">else</span> no evictor)</span><br><span class="line">      [.allowedLateness(...)]    &lt;-  optional: <span class="string">&quot;lateness&quot;</span> (<span class="keyword">else</span> zero)</span><br><span class="line">      [.sideOutputLateData(...)] &lt;-  optional: <span class="string">&quot;output tag&quot;</span> (<span class="keyword">else</span> no side output <span class="keyword">for</span> late data)</span><br><span class="line">       .reduce/aggregate/apply()      &lt;-  required: <span class="string">&quot;function&quot;</span></span><br><span class="line">      [.getSideOutput(...)]      &lt;-  optional: <span class="string">&quot;output tag&quot;</span></span><br></pre></td></tr></table></figure><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">stream</span><br><span class="line">       .windowAll(...)           &lt;-  required: <span class="string">&quot;assigner&quot;</span></span><br><span class="line">      [.trigger(...)]            &lt;-  optional: <span class="string">&quot;trigger&quot;</span> (<span class="keyword">else</span> <span class="keyword">default</span> trigger)</span><br><span class="line">      [.evictor(...)]            &lt;-  optional: <span class="string">&quot;evictor&quot;</span> (<span class="keyword">else</span> no evictor)</span><br><span class="line">      [.allowedLateness(...)]    &lt;-  optional: <span class="string">&quot;lateness&quot;</span> (<span class="keyword">else</span> zero)</span><br><span class="line">      [.sideOutputLateData(...)] &lt;-  optional: <span class="string">&quot;output tag&quot;</span> (<span class="keyword">else</span> no side output <span class="keyword">for</span> late data)</span><br><span class="line">       .reduce/aggregate/apply()      &lt;-  required: <span class="string">&quot;function&quot;</span></span><br><span class="line">      [.getSideOutput(...)]      &lt;-  optional: <span class="string">&quot;output tag&quot;</span></span><br></pre></td></tr></table></figure><p>In the above, the commands in square brackets ([…]) are optional. This reveals that Flink allows you to customize your windowing logic in many different ways so that it best fits your needs.</p><blockquote><p>在上面, 方括号([…])中的命令是可选的, 这表明Flink允许您以多种不同的方式自定义窗口逻辑, 使其最适合您的需求.</p></blockquote><pre class="mermaid">graph LR    subgraph bound1        a[Event] --> b[Event] --> c[Event]    end    subgraph bound2        c --> d[Event] --> e[Event] --> f[Event]    end    f --> g[Event] --> h[Event] --> ...</pre><h1 id="生命周期"><a href="#生命周期" class="headerlink" title="生命周期"></a>生命周期</h1><p>in a nutshell , a window is created as soon as the first element that should belong to this window arrives, and the window is conpletely removed when the time (even or processing time) passes its end timestamp plus the user-specified allowed lastness(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#allowed-lateness">Allowed Lateness</a>). Flink guarantees removal only for time-based windows and not for other types, eg. global windows (see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-assigners">Window Assigners</a>). For Exemple , with an event-time-based windowing strategy that creates non-overlapping(or tumbling) windwos every 5 minutes and has an allowed lateness of 1 min, Flink will create a new window for the interval between 12:00 and 12:05 when the first element with a timestamp that falls into this interval arrives, and it will remove it when the watermark passes the 12:06 timestamp.</p><blockquote><p>简而言之, 当地一个应该属于这个创建口的元素到达的时候, 就会创建一个窗口, 而当时间(事件事件或者处理时间)超过其结束时间戳加上用户指定的允许延迟时, 该窗口就会被完全删除. Flink只保证基于时间的窗口的溢出, 而不保证其他的类型, 例如全局窗口. 例如, 对于一个基于事件事件的窗口策略, 每五分钟吃u昂建一个不重叠(或者翻滚)的窗口, 并且允许分钟的延迟, 当地一个育有时间戳的元素到达这个区间的时候, Flink将为12:00和12:05之间的区间创建一个新的窗口, 并且当水印通过12:06的时间戳的时候, 将会删除</p></blockquote><p>in addition, each window will have a Trigger (see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#triggers">Trigger</a>) and a function(ProcessWindowFunction, ReduceFunction, Or AggregateFunction)(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-functions">Window Functions</a>) attached to it, The function will contain the computation to be applied to the contents of the window , while the Trigger specifies the condition of the windwo , window is considered ready for the function to be applied. A triggering policy might be something like “when the number of elements in the window is more than 4”, or “when the watermark passes the end of the window”. A trigger can also decide to purge a window’s contents any time between its creation and removal , Purging in this case only refers to the elements in the window, and not the window metadata. This means that new data can still be added to that window.</p><blockquote><p>此外, 每一个窗口都会有一个触发器和一个函数(ProcessWindowFunction,ReduceFunction或则AggregateFunction)附加到它. 该函数将包含应用于窗口内容的计算, 而触发器则指定窗口被认为朱安备好应用该函数的条件. 触发策略可能是”当窗口中的元素数量超过4”或者”当水印通过窗口的末端的时候”. 触发器也可以决定窗口创建和删除之间的任何时间清除其中的内容. 在这种情况下, 清除只指窗口中的元素, 而不是窗口的元数据. 这意味着, 新的数据仍然可以被添加到该窗口.</p></blockquote><p>Apart from the above , you can specify an Evictor(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#evictors">Evictor</a>) which will be able to remove elements from the window after the trigger fires and before and/or after the function is applied.</p><p>In the following we go into more deetail for each of the components above. We start with the required parts in the above snippet(see <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#keyed-vs-non-keyed-windows">Keyed vs Non-Keyed Windows</a>, <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-assigner">Windwo Assigner</a>, and <a href="https://nightlies.apache.org/flink/flink-docs-release-1.13/zh/docs/dev/datastream/operators/windows/#window-function">Window Function</a>)before moving to the optional ones.</p><blockquote><p>除了上面的这些, 你还可以指定一个Evictor, 他将能够在触发器出发之后, 在函数应用之前和/或者之后从窗口中移除元素.</p><p>在下文中, 我们将会对上述的组件进行更加详细的讨论, 我们从上述片段中的必要部分开始, 然后再转到可选部分</p></blockquote><h1 id="窗口类型"><a href="#窗口类型" class="headerlink" title="窗口类型"></a>窗口类型</h1><ul><li><p>时间窗口</p><p>:one:滚动时间窗口</p><p>:two:滑动时间窗口</p><p>:three:会话窗口</p></li><li><p>计数窗口</p><p>:one:滚动计数窗口</p><p>:two:滑动技术窗口</p></li></ul><h1 id="滚动窗口"><a href="#滚动窗口" class="headerlink" title="滚动窗口"></a>滚动窗口</h1><p>A tumbing windows assigner assigns each element to a window of sprcified window size. Tubming windows have a fixed size and do not overlap. For example, if you specify a tumbling window with a size of 5 minutes, the current window will be evaluated and a new window will be  started every five minutes as illisrated by the following figure.</p><blockquote><p>滚动窗口分配器将每个元素分配到一个指定窗口大小的窗口. 滚动窗口有一个固定的尺寸, 并且不重叠. 例如, 如果你指定一个大小为5分钟的滚动窗口, 当前的窗口将会被评估, 并且每5分钟开始一个新的窗口. 如下图所示.</p></blockquote><p><strong>:red_circle:Flink窗口是左闭右开的, 例如0-5s最后一个时间戳是4999​</strong></p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tumbling-windows.svg"></p><pre class="mermaid">graph LR    A[数据流]    subgraph "key1-window-[0~5]"        F[key2-event] --> G[key2-event]    end    subgraph "key1-window-[0~5]"        D[key1-event] --> E[key1-event]    end    A --> F    A --> D</pre><h1 id="滑动窗口"><a href="#滑动窗口" class="headerlink" title="滑动窗口"></a>滑动窗口</h1>]]></content>
+        <content type="html"><![CDATA[<p>参考引用链接: </p><ul><li><a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">分布式快照算法: Chandy-Lamport</a></li><li>五分钟学大数据微信公众号</li><li>尚硅谷大数据学习文档</li><li>Flink1.13官方文档</li></ul><h1 id="Flink流式处理的简介"><a href="#Flink流式处理的简介" class="headerlink" title="Flink流式处理的简介"></a>Flink流式处理的简介</h1><h2 id="Flink是什么"><a href="#Flink是什么" class="headerlink" title="Flink是什么"></a>Flink是什么</h2><p>Apache Flink是一个框架和分布式处理引擎, 对于有界流和无界流进行状态计算.</p><h2 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h2><ol><li>支持高吞吐, 低延时, 高性能的处理</li><li>支持带有事件时间的窗口操作</li><li>支持有状态计算的Exactly-once语义</li><li>支持高度灵活的窗口操作, 支持基于time, count, session 以及 data-driven的操作</li><li>支持具有Backpressure功能的持续流模型</li><li>支持基于轻量级分布式快照 snapshot实现的容错</li><li>一个运行时同时支持batch on streaming处理和streaming处理</li><li>Flink支持在jvm内部实现了自己的内存管理</li><li>支持迭代计算</li><li>支持程序自动化: 避免特定情况下shuffle, 排序等昂贵操作, 中间结果有必要进行缓存</li></ol><h2 id="Flink基石"><a href="#Flink基石" class="headerlink" title="Flink基石"></a>Flink基石</h2><p>Flink之所以这么流畅, 离不开它最重要的四个基石 : CheckPoint, State, Time, Window</p><h3 id="CheckPoint"><a href="#CheckPoint" class="headerlink" title="CheckPoint"></a>CheckPoint</h3><p>CheckPoint机制, 这是Flink最重要的一个特性, Flink基于Chandy-Lamport算法实现了一个分布式的一致性快照, 从而提供了一致性的语义. <a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">Chandy-Lamport</a>算法是在1985年的时候被提出来了, 但是并没有被很广泛的应用, 而Flink则是将这个算法发扬光大了</p><blockquote><p>Chandy-Lamport</p><p> Spark 的 Structured Streaming 的 Continuous Processing Mode 的容错处理使用了分布式快照（Distributed Snapshot）算法 Chandy-Lamport 算法</p></blockquote><h3 id="State"><a href="#State" class="headerlink" title="State"></a>State</h3><p>提供了一致性的语义之后, 为了更加轻松的管理状态, 提供了一套简单明了的状态API, 里面提供了ValueState, ListState, MapState, BroadCastState等, 使得State API能够自动的享受一致性的语义</p><h3 id="Watermark"><a href="#Watermark" class="headerlink" title="Watermark"></a>Watermark</h3><p>能够支持基于时间的时间的处理, 或者说基于系统时间的处理, 能够容忍数据的延时, 容忍数据的迟到, 容忍乱序的数据</p><h3 id="Window"><a href="#Window" class="headerlink" title="Window"></a>Window</h3><p>Flink提供了开箱即用的各种窗口, 比如滑动窗口, 滚动窗口, 会话窗口以及非常灵活的自定义的窗口</p><h2 id="批处理和流处理"><a href="#批处理和流处理" class="headerlink" title="批处理和流处理"></a>批处理和流处理</h2><p>Flink分别提供了面向流式处理的接口(Data Stream API)和面向批处理的(DataSet API), 因此Flink既可以完成流式处理, 也可以完成批处理</p><h1 id="Flink运行架构"><a href="#Flink运行架构" class="headerlink" title="Flink运行架构"></a>Flink运行架构</h1><h2 id="架构对比"><a href="#架构对比" class="headerlink" title="架构对比"></a>架构对比</h2><h3 id="HDFS主从架构"><a href="#HDFS主从架构" class="headerlink" title="HDFS主从架构"></a>HDFS主从架构</h3><pre class="mermaid">graph LR    A[NameNode] --> B[DataNode]    A --> C[DataNode]    A --> D[DataNode]</pre><h3 id="Spark架构"><a href="#Spark架构" class="headerlink" title="Spark架构"></a>Spark架构</h3><pre class="mermaid">graph LR     A[Driver] --> B[Executer]    A --> C[Executer]    A --> D[Executer]</pre><h3 id="Flink架构"><a href="#Flink架构" class="headerlink" title="Flink架构"></a>Flink架构</h3><p>Flink运行时由两种类型组成, 一个JobManager(作业管理器, Master进程)和一个或者多个TaskManager组成(任务管理器, slave进程)</p><pre class="mermaid">graph LR    A[JobManager] --> B[TaskManager]    A --> C[TaskManager]    A --> D[TaskManager]</pre><h2 id="Flink程序结构"><a href="#Flink程序结构" class="headerlink" title="Flink程序结构"></a>Flink程序结构</h2><p>Flink程序的基本结构块是流和转换, 从概念上讲, 流是数据记录的流, 而转换是将一个或者多个流作为一份或对各流的操作, 输入, 并产生一个或者多个数据流</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/image-20211112091257543.png"></p><h3 id="Source"><a href="#Source" class="headerlink" title="Source"></a>Source</h3><p>Source: 数据源, Flink在流处理和批处理的source大概有4类</p><blockquote><p>基于本地集合的Source</p><p>基于文件的Source</p><p>基于网络套接字的Source</p><p>自定义的Source</p></blockquote><p>自定义的Source常见的又Apache kafka, RabbitMQ等, 当然也可以定义自己的Source</p><h3 id="Transformation"><a href="#Transformation" class="headerlink" title="Transformation"></a>Transformation</h3><p>数据转化的各种操作, 又Map/FlatMap/Filter/KeyBy/Reduce/Fold/Aggregations/Window/WindowAll/Union/Window join/Split/Select等, 操作很多, 可以将数据转换计算成为你想要的数据</p><h3 id="Sink"><a href="#Sink" class="headerlink" title="Sink"></a>Sink</h3><p>接收器, Flink将转换计算后的数据发送的地点, 需要存储数据. Flink常见的Sink有如下几类: </p><ul><li>写入文件</li><li>控制台打印</li><li>写入socket</li><li>自定义sink</li></ul><p>自定义sink常见的有Apache kafka, RabbitMQ, MySQL,ElasticSearch, Apache Cassandra, HDFS等等, 我们也可以自定义属于自己的sink</p><h2 id="Flink并行数据流"><a href="#Flink并行数据流" class="headerlink" title="Flink并行数据流"></a>Flink并行数据流</h2><p>Flink程序在运行的时候, 会被映射成为一个StreamingDataflow, 一个Streaming Dataflow是一组Stream和Transformation Operator组成的. 在启动的时候从一个或者多个SourceOperator开始, 结束语一个或者多个Sink Operator.</p><h3 id="并行和分布式"><a href="#并行和分布式" class="headerlink" title="并行和分布式"></a>并行和分布式</h3><p><strong>Flink程序的本质上是并行的和分布式的,</strong> 在执行的过程中, 一个流(stream)包含一个或者多个流的分区, 而每一个operator包含一个或者多个operator子任务. 操作子任务之间是彼此独立的, 在不同的线程中执行, 甚至是在不同的机器或者不同的容器上. 而operator子任务的数量是这一特定Operator并行度. 相同程序中的不同operator有不同级别的并行度.</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20211113141754.jpg"></p><p>一个Stream可以被分成多个Stream的分区, 也就是Stream Partition. 一个Operator也可以被分为多个Operator Subtask, 如图所示. Source被分成Source1和Source2, 它们分别是Source的Operator Subtask. <strong>每一个Operator Subtask都是在不同的线程当中独立运行的</strong>. 一个Operator的并行度, 就等于Operator Subtask的个数, 上图Source的并行度为2, 而一个Stream的并行度就等于它生成Operator的并行度</p><h3 id="One-to-One"><a href="#One-to-One" class="headerlink" title="One to One"></a>One to One</h3><p>两个operator用此模式传递的时候, 会保持数据的分区和数据的排序, 如上图的Source1到Map1, 它就会保留Source的分区特性, 以及分区元素处理的有序性.</p><h3 id="Redistributing"><a href="#Redistributing" class="headerlink" title="Redistributing"></a>Redistributing</h3><p>重新分配模式, 这种模式或改变数据的分区, 每一个operator subtask 会根据选择的transformation将数据发送到不同的目标subtasks, 比如keyBy()会通过hashcode重新分区, broadcast() 和 rebalance() 方法会随机重新分区.</p><h2 id="Task和-Operator-chain"><a href="#Task和-Operator-chain" class="headerlink" title="Task和 Operator chain"></a>Task和 Operator chain</h2><p>Flink的所有操作都称之为Operator, 客户端在提交任务的时候会对Operator进行优化操作, 能进行合并的Operator会被合并为一个Operator, <strong>合并后的Operator称为Operator chain, 实际上就是一个执行链, 每个执行链会在TaskManager上独立的线程中执行.</strong></p><p>对于分布式执行， Flink将算子的subtasks链接成为task。每个Task由一个线程执行， 将算子链接成为Task是个有用的优化：</p><blockquote><p>减少了线程间之间的切换， 缓冲的开销， 并且减少延迟的同时提升整体的吞吐量，链行为是可以配置的</p></blockquote><p>使用了5个SubTask执行， 因此存在5个<strong>并行</strong>的线程</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tasks_chains.svg"></p><h2 id="Flink任务调度与执行"><a href="#Flink任务调度与执行" class="headerlink" title="Flink任务调度与执行"></a>Flink任务调度与执行</h2><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/processes.svg"></p><ol><li>Flink Program会将Program Dataflow通过Graph Builder构建Dataflow Graph</li><li>ActorSystem创建Actor将数据流图发送给JobManager中的Actor</li><li>JobManage会不断接受TaskManager的心跳信息, 从而可以获取到有效的TaskManager</li><li>JobManager通过调度器在TaskManager中调度执行Task(在Fllink中中最小的调度单元就是Task, 对应就是一个线程)</li><li>在程序运行的过程中, task与task之间是可以进行数据传输的</li></ol><blockquote><p>Client并不是运行时和程序执行的一部分， 而是用于准备数据流并将其发送给JobManager。 之后， 客户端可以断开链接（分离模式）， 或者保持链接来接受进程报告（附加模式）。</p><p>客户端可以作为出发执行Java/Scala程序的一部分运行， 亦可以在命令行进程<code>./bin/flink run ...</code>中运行</p><p>可以通过多种方式启动JobManager和TaskManager：</p><p>直接在机器上作为standalone集群启动， 在容器中启动， 或者通过yarn或者mesos等资源框架管理并启动， TaskManager连接到JobManager, 宣布自己可用， 并分配工作</p></blockquote><h3 id="JobClient"><a href="#JobClient" class="headerlink" title="JobClient"></a>JobClient</h3><ol><li>主要工作是提交任务, 提交之后可以结束进程, 也可以等待结果返回</li><li>JobClient不是Flink程序执行的内部部分, 但它是任务执行的起点</li><li>JobClient负责接受用户的程序代码, 然后创建数据流, 将数据流提交给JobManager以便进一步执行, 执行完毕之后, JobClient将结果返回给客户</li></ol><h3 id="JobManager"><a href="#JobManager" class="headerlink" title="JobManager"></a>JobManager</h3><p>作业管理器就是一个JVM进程, 其中包含三类线程</p><p>:chestnut:三类线程</p><ul><li>ResurceManager： Flink的资源管理器， 资源是任务插槽（Task Slot）</li><li>Dispatcher： 分发器，提供了Rest接口， 用于提交Flink应用程序， 并为每个Flink的应用程序启动一个新的JobMaster. 它还运行了FlinkWebUI用来提供作业的执行信息</li><li>JobMaster: 每个作业（Job）对应一个，负责管理单个JobGraph的执行， Flink中可以同时运行多个作业， 每个作业都有自己的JobMaster</li></ul><pre class="mermaid">graph LR    A[JobManager] --> B([ResourceManager])    A --> C([Dispatcher])    A --> D([JobMaster])</pre><p>:one:主要职责是调度工作并协调任务检查点</p><p>:two:集群中至少要存在一个master, master负责调度task, 协调checkpoints和容错</p><p>:three:高可用设置的话可以有多个master, 但是保证一个是leader, 其他是standby</p><p>:four:JobManager包含Actor System, Scheduler, CheckPoint三个重要的组件</p><p>:five:JobManager从客户端接收到任务之后, 首先生成优化过的执行计划, 再调度到TaskManager中进行执行</p><h3 id="TaskManager"><a href="#TaskManager" class="headerlink" title="TaskManager"></a>TaskManager</h3><ul><li>TaskSlot： 任务插槽， 是一个物理分区</li><li>不同的任务插槽就是不同的物理分区</li><li>每个任务插槽是一个内存分片</li><li>内存的本质是字节数组</li></ul><pre class="mermaid">graph LR    A[TaskManager] --> B([Task Slot])    A --> C([Task Slot])    A --> D([Task Slot])</pre><p>:one:主要职责是从JobManager处接收任务, 并部署启动, 接受上游的数据并处理</p><p>:two:TaskManager是在JVM中的一个或者多个线程中执行任务的工作节点</p><p>:three:TaskManager在创建之处就设置好了Slot, 每个Slot可以执行一个任务</p><h2 id="任务槽和槽共享"><a href="#任务槽和槽共享" class="headerlink" title="任务槽和槽共享"></a>任务槽和槽共享</h2><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tasks_slots.svg"></p><p>每个TaskManager是一个JVM进程， 可以在不同的线程中执行一个或者多个子任务。 为了控制一个TaskManager能够接受多少个task。 TaskManager通过task slot进行控制， 一个TaskManager至少拥有一个task slot</p><h3 id="任务槽"><a href="#任务槽" class="headerlink" title="任务槽"></a>任务槽</h3><p>每个task slot表示TaskManager表示资源的一个固定大小的子集</p><p>Flink将进程的内存划分到多个slot中。</p><p>途中有两个TaskManager， 每个TaskManager有3个slot， 每个slot占用1/3的内存</p><p>内存被划分到不同的slot之后可以获得如下好处：</p><p>:one:TaskManager最多能同时并发执行的任务是可以控制的， 那就是3个， 因为不能超过slot的数量</p><p>:two:slot有独占的内存空间， 这样在一个TaskManager中可以运行多个不同的作业， 作业之间不会受到影响。</p><h3 id="槽共享"><a href="#槽共享" class="headerlink" title="槽共享"></a>槽共享</h3><p>默认情况下， Flink允许子任务共享插槽， 即使它们是不同task的subtask， 只要它们来自于同一个作业， 结果是一个slot可以保存作业的整个管道。 允许插槽共享有两个主要的好处：</p><p>:one:只需要计算Job最高并行度（parallelism）的task slot， 只要这个满足， 其他的job也可以满足</p><p>:two:资源分配更加的公平， 如果有比较空闲的slot可将更多的任务分配给他。 图中若没有任务槽共享， 负载不高的Source/Map等subtask将会占据许多的资源， 而负载较高的窗口subtask则会缺乏资源</p><p>:three:有了任务槽共享， 可以将基本并行度（base parallelism）从2提升至6， 提高了分配资源的利用率。 同时还可以保障TaskManager给subtask分配的slot方案更加的公平</p><h3 id="不同的DAG结构-有争议"><a href="#不同的DAG结构-有争议" class="headerlink" title="不同的DAG结构(有争议)"></a>不同的DAG结构(有争议)</h3><pre class="mermaid">graph LR    StreamGraph -->|客户端| JobGraph -->|作业管理器| ExecutionGraph -->|部署| PhysicalGraph</pre><ul><li><p>StreamGraph: 是根据用户通过Stream API编写的代码生成的最初的图, 用来表示程序的拓扑结构</p></li><li><p>JobGraph: StreamGraph 在编译阶段经过优化之后生成了JobGraph, 提交给JobManager的数据结构. 主要的有华为, 将多个符合条件(窄依赖, 没有shuffle, 并行度相同)的算组串联在一起作为一个节点, 保证串联起来的节点里面所有的算子都在同一个任务插槽执行, 这样算子之间的数据就是本地转发的(无序序列化和网络io), 需要两个条件</p><blockquote><ul><li>两个算子之间没有shuffle的存在</li><li>两个算子的并行度必须相同</li></ul></blockquote></li><li><p>ExecutionGraph: JobManager根据JobGraph生成ExecutionGraph, ExecutionGraph是JobGraph的并行化版本, 是调度曾最核心的数据结构</p></li><li><p>PhysicalGraph: JobManager根据ExecutionGraph对job进行调度之后, 在各个TaskManager上部署Task后形成的图 , 并不是具体的数据结构</p></li></ul>]]></content>
       
       
       <categories>
@@ -321,6 +346,31 @@
     
     
     <entry>
+      <title>Interview-FLink</title>
+      <link href="/2010/12/12/Interview-Flink/"/>
+      <url>/2010/12/12/Interview-Flink/</url>
+      
+        <content type="html"><![CDATA[<div class="hide-toggle" style="border: 1px solid #FF7242"><div class="hide-button toggle-title" style="background-color: #FF7242;color: #fff"><i class="fas fa-caret-right fa-fw"></i><span><b>查看答案</b></span></div>    <div class="hide-content"></div></div><h2 id="Flink和SparkStreaming的区别"><a href="#Flink和SparkStreaming的区别" class="headerlink" title="Flink和SparkStreaming的区别"></a>Flink和SparkStreaming的区别</h2><div class="hide-toggle" style="border: 1px solid #FF7242"><div class="hide-button toggle-title" style="background-color: #FF7242;color: #fff"><i class="fas fa-caret-right fa-fw"></i><span><b>查看答案</b></span></div>    <div class="hide-content"><p>Flink时标准的实时引擎, 基于事件驱动, 而SparkSteaming是微批处理<br>框架的主要区别: </p><p>SparkStreaming框架的主要运行角色包括: Master, Worker, Driver,Executor</p><p>Flink在运行的时候主要包含</p></div></div>]]></content>
+      
+      
+      <categories>
+          
+          <category> Interview </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Flink </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Interview-分层</title>
       <link href="/2010/12/12/Interval-%E5%88%86%E5%B1%82/"/>
       <url>/2010/12/12/Interval-%E5%88%86%E5%B1%82/</url>
@@ -346,11 +396,11 @@
     
     
     <entry>
-      <title>Interview-FLink</title>
-      <link href="/2010/12/12/Interview-Flink/"/>
-      <url>/2010/12/12/Interview-Flink/</url>
+      <title>Interview-Kafka</title>
+      <link href="/2010/12/12/Interview-Kafka/"/>
+      <url>/2010/12/12/Interview-Kafka/</url>
       
-        <content type="html"><![CDATA[<div class="hide-toggle" style="border: 1px solid #FF7242"><div class="hide-button toggle-title" style="background-color: #FF7242;color: #fff"><i class="fas fa-caret-right fa-fw"></i><span><b>查看答案</b></span></div>    <div class="hide-content"></div></div><h2 id="Flink和SparkStreaming的区别"><a href="#Flink和SparkStreaming的区别" class="headerlink" title="Flink和SparkStreaming的区别"></a>Flink和SparkStreaming的区别</h2><div class="hide-toggle" style="border: 1px solid #FF7242"><div class="hide-button toggle-title" style="background-color: #FF7242;color: #fff"><i class="fas fa-caret-right fa-fw"></i><span><b>查看答案</b></span></div>    <div class="hide-content"><p>Flink时标准的实时引擎, 基于事件驱动, 而SparkSteaming是微批处理<br>框架的主要区别: </p><p>SparkStreaming框架的主要运行角色包括: Master, Worker, Driver,Executor</p><p>Flink在运行的时候主要包含</p></div></div>]]></content>
+        <content type="html"><![CDATA[<h1 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h1><h2 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h2><p>生产者,  消费者,  broker,  zk(broker ids, controller, isr)</p><blockquote><p>每一个broker都有一个controller</p></blockquote><h2 id="安装多少台"><a href="#安装多少台" class="headerlink" title="安装多少台"></a>安装多少台</h2><p>2 * (生产者峰值生产速率 * 副本 /100)+1</p><h2 id="压测"><a href="#压测" class="headerlink" title="压测"></a>压测</h2><p>生产者峰值生产速率, 消费者峰值消费速率</p><h2 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h2><p>默认1个, 设置为2个</p><p>副本多的好处, 提高可靠性, 坏处是降低了效率</p><h2 id="速率"><a href="#速率" class="headerlink" title="速率"></a>速率</h2><p>100万日活 * 100条 = 1亿</p><p>1亿/(24 * 3600) = 1150条/s    每条1K,  1m/s</p><p>1亿 * 1k = 100G</p><p>1000万 * 1k = 10G</p><p>100万 * 1k = 1G</p><h2 id="是否做了监控"><a href="#是否做了监控" class="headerlink" title="是否做了监控"></a>是否做了监控</h2><p>eagle,  kafka manager(新版本要求jdk14)</p><blockquote><p>如果是自己研发的, 仰视大佬</p></blockquote><h2 id="分区设置为多少"><a href="#分区设置为多少" class="headerlink" title="分区设置为多少"></a>分区设置为多少</h2><p>期望的吞吐量  t</p><p>生产者峰值生产速率  tp  20m/s</p><p>消费者峰值消费速率  tc  40m/s</p><p>分区数 = t /min(tp, tc) = 100/20 = 5</p><blockquote><p>小公司为 3-5个分区</p></blockquote><h2 id="生产者-gt-broker"><a href="#生产者-gt-broker" class="headerlink" title="生产者 =&gt; broker"></a>生产者 =&gt; broker</h2><ol><li><p>指定分区, 按照指定的分区</p></li><li><p>没有指定分区, 指定了key, 按照可以的hash值%上分区数</p></li><li><p>没有key, 没有指定分区</p><p>粘性分区, 随机选择一个分区, 达到批次或者linger.ms()的时候, 切换下一个分区, 下一个分区不会是上一个分区</p></li></ol><h2 id="broker-gt-消费者"><a href="#broker-gt-消费者" class="headerlink" title="broker =&gt; 消费者"></a>broker =&gt; 消费者</h2><ol><li><p>range</p><p>10个分区            三个消费者</p><p>0  1  2  3                数据倾斜</p><p>4  5  6 </p><p>7  8  9</p><blockquote><p>45秒以内</p><p>0  1  2  3  7  8  9</p><p>4  5  6 </p><p>45秒以后</p><p>0  1  2  3  4 </p><p>5  6  7  8  9</p></blockquote></li><li><p>roundrobin  轮询</p><p>10个分区            三个消费者</p><p>0  3  6  9        </p><p>1  4  7</p><p>2  5  8</p><blockquote><p>45秒以后</p><p>0  3  6  9  2  8        </p><p>1  4  7  5</p></blockquote></li><li><p>粘性</p><p>10个分区            三个消费者</p><p>尽可能的均分        3 3 4</p><p>0  3  5 </p><p>2  6  9</p><p>1  4  7  8</p><blockquote><p>45秒以内挂了</p><p>0  3  5  1  7 </p><p>2  6  9  4  8</p></blockquote></li></ol><h1 id="挂了"><a href="#挂了" class="headerlink" title="挂了"></a>挂了</h1><h2 id="起不来了"><a href="#起不来了" class="headerlink" title="起不来了"></a>起不来了</h2><ol><li><p>整个集群瘫痪</p><p>后面的Flume消费不到数据, 影响不大. </p><p>前面的Flume如果采用的是memory channel的话可能会丢失100个event, 影响不大, 如果使用的是kafka channel, 当kafka挂掉之后, 无法发送数据, 没有任何意义, 如果使用的是taildir, 不会发生数据丢失, 当极端情况下可能会造成整个Flume的瘫痪, 但是我们的日志采集服务器日志默认保存30天, 问题不大.</p></li><li><p>一个节点挂了</p><p>3台服务器, 如果存在2个副本的情况下, 可以直接删除节点, 没有任何问题, 之后通过服役和退役.</p></li></ol><h2 id="节点没了"><a href="#节点没了" class="headerlink" title="节点没了"></a>节点没了</h2><p>只要副本是2, 一切好说. 如果是1, 需要带着历史数据启动. 服役退役</p><h1 id="丢了"><a href="#丢了" class="headerlink" title="丢了"></a>丢了</h1><p>ack 0 : 生产者发送的数据不需要应答, 可靠性低, 效率高, 生产环境几乎不用</p><p>ack 1 : 生产者发送过来的数据leader 应答, 可靠性一般, 效率一般</p><p>ack -1: 生产者发送过来的数据 leader + irs队列中 follower应答</p><p>​            leader 0 [0,1]</p><p>​            isr默认保存的值, 1 -&gt; 设置为大于等于2</p><p>​            副本数量大于等于2</p><h1 id="重复了"><a href="#重复了" class="headerlink" title="重复了"></a>重复了</h1><h2 id="生产者-gt-Broker"><a href="#生产者-gt-Broker" class="headerlink" title="生产者  ==&gt; Broker"></a>生产者  ==&gt; Broker</h2><p>幂等性就是指Producer不论向Broker发送多少次重复数据, Broker端都只会持久化一条, 保证了不重复, 结合上至少一次, 就构成了Kafka的精准一次消费</p><blockquote><p><strong>精准一次消费:</strong> </p><p><code>幂等性</code>+ <code>至少一次(ack = -1 + 分区副本数 &gt;= 2 + ISR最小副本数量 &gt;=2)</code></p></blockquote><p>生产者向broker发送消息是通过</p><p>判断的key (pid (每次启动会更新一次),  分区,  序列号)</p><p>幂等性    =&gt; 指的是单分区, 但绘画数据不丢不重复</p><p>事务        =&gt; </p><ul><li>初始化事务</li><li>开启事务</li><li>提交事务</li><li>终止事务</li><li>offset提交事务</li></ul><h2 id="Broker-gt-消费者"><a href="#Broker-gt-消费者" class="headerlink" title="Broker  ==&gt; 消费者"></a>Broker  ==&gt; 消费者</h2><p>事务</p><h1 id="积压了"><a href="#积压了" class="headerlink" title="积压了"></a>积压了</h1><ol><li><p>增加分区数量</p><blockquote><p>bin/kafka-topic.sh –bootstrap-server Hadoop102:9092 –alter –topic first  –partitions  6</p></blockquote></li><li><p>kafka的分区增加了, 但是对应的消费者并没有增加, 这里我们要增加对应cpu数量, 和kafka的分区数相对应, 进行消费数据</p></li><li><p>调高消费者每批次抓取条数大小, 默认为500条, 默认批次大小为55m, 可以尝试提高批次大小和处理批次的条数, 增加吞吐量.</p></li></ol><h1 id="乱序了"><a href="#乱序了" class="headerlink" title="乱序了"></a>乱序了</h1><ul><li><p>kafka  1.x</p><p>不需要考虑是否开启幂等性</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection = 1</span><br></pre></td></tr></table></figure></li><li><p>kafka  1.x以后的版本</p><p>在未开启幂等性的情况下, 和1.x的版本一样处理</p><p>在开启幂等性的情况下, 会缓存producer发来的最近5个request的数据</p><p>需要设置缓存的请求个数小于等于5个, 会在服务器端从新排序</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection # 设置参数小于等于5</span><br></pre></td></tr></table></figure></li></ul><h1 id="做了哪些优化"><a href="#做了哪些优化" class="headerlink" title="做了哪些优化"></a>做了哪些优化</h1><h1 id="杂七杂八"><a href="#杂七杂八" class="headerlink" title="杂七杂八"></a>杂七杂八</h1><h1 id="提高吞吐量"><a href="#提高吞吐量" class="headerlink" title="提高吞吐量"></a>提高吞吐量</h1><h1 id="为什么能做到高校读写"><a href="#为什么能做到高校读写" class="headerlink" title="为什么能做到高校读写"></a>为什么能做到高校读写</h1>]]></content>
       
       
       <categories>
@@ -362,7 +412,7 @@
       
         <tags>
             
-            <tag> Flink </tag>
+            <tag> Kafka </tag>
             
         </tags>
       
@@ -402,41 +452,16 @@
     
     
     <entry>
-      <title>Interview-Kafka</title>
-      <link href="/2010/12/12/Interview-Kafka/"/>
-      <url>/2010/12/12/Interview-Kafka/</url>
+      <title>Interview-FLink</title>
+      <link href="/2010/12/12/Interview-Leetcode/"/>
+      <url>/2010/12/12/Interview-Leetcode/</url>
       
-        <content type="html"><![CDATA[<h1 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h1><h2 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h2><p>生产者,  消费者,  broker,  zk(broker ids, controller, isr)</p><blockquote><p>每一个broker都有一个controller</p></blockquote><h2 id="安装多少台"><a href="#安装多少台" class="headerlink" title="安装多少台"></a>安装多少台</h2><p>2 * (生产者峰值生产速率 * 副本 /100)+1</p><h2 id="压测"><a href="#压测" class="headerlink" title="压测"></a>压测</h2><p>生产者峰值生产速率, 消费者峰值消费速率</p><h2 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h2><p>默认1个, 设置为2个</p><p>副本多的好处, 提高可靠性, 坏处是降低了效率</p><h2 id="速率"><a href="#速率" class="headerlink" title="速率"></a>速率</h2><p>100万日活 * 100条 = 1亿</p><p>1亿/(24 * 3600) = 1150条/s    每条1K,  1m/s</p><p>1亿 * 1k = 100G</p><p>1000万 * 1k = 10G</p><p>100万 * 1k = 1G</p><h2 id="是否做了监控"><a href="#是否做了监控" class="headerlink" title="是否做了监控"></a>是否做了监控</h2><p>eagle,  kafka manager(新版本要求jdk14)</p><blockquote><p>如果是自己研发的, 仰视大佬</p></blockquote><h2 id="分区设置为多少"><a href="#分区设置为多少" class="headerlink" title="分区设置为多少"></a>分区设置为多少</h2><p>期望的吞吐量  t</p><p>生产者峰值生产速率  tp  20m/s</p><p>消费者峰值消费速率  tc  40m/s</p><p>分区数 = t /min(tp, tc) = 100/20 = 5</p><blockquote><p>小公司为 3-5个分区</p></blockquote><h2 id="生产者-gt-broker"><a href="#生产者-gt-broker" class="headerlink" title="生产者 =&gt; broker"></a>生产者 =&gt; broker</h2><ol><li><p>指定分区, 按照指定的分区</p></li><li><p>没有指定分区, 指定了key, 按照可以的hash值%上分区数</p></li><li><p>没有key, 没有指定分区</p><p>粘性分区, 随机选择一个分区, 达到批次或者linger.ms()的时候, 切换下一个分区, 下一个分区不会是上一个分区</p></li></ol><h2 id="broker-gt-消费者"><a href="#broker-gt-消费者" class="headerlink" title="broker =&gt; 消费者"></a>broker =&gt; 消费者</h2><ol><li><p>range</p><p>10个分区            三个消费者</p><p>0  1  2  3                数据倾斜</p><p>4  5  6 </p><p>7  8  9</p><blockquote><p>45秒以内</p><p>0  1  2  3  7  8  9</p><p>4  5  6 </p><p>45秒以后</p><p>0  1  2  3  4 </p><p>5  6  7  8  9</p></blockquote></li><li><p>roundrobin  轮询</p><p>10个分区            三个消费者</p><p>0  3  6  9        </p><p>1  4  7</p><p>2  5  8</p><blockquote><p>45秒以后</p><p>0  3  6  9  2  8        </p><p>1  4  7  5</p></blockquote></li><li><p>粘性</p><p>10个分区            三个消费者</p><p>尽可能的均分        3 3 4</p><p>0  3  5 </p><p>2  6  9</p><p>1  4  7  8</p><blockquote><p>45秒以内挂了</p><p>0  3  5  1  7 </p><p>2  6  9  4  8</p></blockquote></li></ol><h1 id="挂了"><a href="#挂了" class="headerlink" title="挂了"></a>挂了</h1><h2 id="起不来了"><a href="#起不来了" class="headerlink" title="起不来了"></a>起不来了</h2><ol><li><p>整个集群瘫痪</p><p>后面的Flume消费不到数据, 影响不大. </p><p>前面的Flume如果采用的是memory channel的话可能会丢失100个event, 影响不大, 如果使用的是kafka channel, 当kafka挂掉之后, 无法发送数据, 没有任何意义, 如果使用的是taildir, 不会发生数据丢失, 当极端情况下可能会造成整个Flume的瘫痪, 但是我们的日志采集服务器日志默认保存30天, 问题不大.</p></li><li><p>一个节点挂了</p><p>3台服务器, 如果存在2个副本的情况下, 可以直接删除节点, 没有任何问题, 之后通过服役和退役.</p></li></ol><h2 id="节点没了"><a href="#节点没了" class="headerlink" title="节点没了"></a>节点没了</h2><p>只要副本是2, 一切好说. 如果是1, 需要带着历史数据启动. 服役退役</p><h1 id="丢了"><a href="#丢了" class="headerlink" title="丢了"></a>丢了</h1><p>ack 0 : 生产者发送的数据不需要应答, 可靠性低, 效率高, 生产环境几乎不用</p><p>ack 1 : 生产者发送过来的数据leader 应答, 可靠性一般, 效率一般</p><p>ack -1: 生产者发送过来的数据 leader + irs队列中 follower应答</p><p>​            leader 0 [0,1]</p><p>​            isr默认保存的值, 1 -&gt; 设置为大于等于2</p><p>​            副本数量大于等于2</p><h1 id="重复了"><a href="#重复了" class="headerlink" title="重复了"></a>重复了</h1><h2 id="生产者-gt-Broker"><a href="#生产者-gt-Broker" class="headerlink" title="生产者  ==&gt; Broker"></a>生产者  ==&gt; Broker</h2><p>幂等性就是指Producer不论向Broker发送多少次重复数据, Broker端都只会持久化一条, 保证了不重复, 结合上至少一次, 就构成了Kafka的精准一次消费</p><blockquote><p><strong>精准一次消费:</strong> </p><p><code>幂等性</code>+ <code>至少一次(ack = -1 + 分区副本数 &gt;= 2 + ISR最小副本数量 &gt;=2)</code></p></blockquote><p>生产者向broker发送消息是通过</p><p>判断的key (pid (每次启动会更新一次),  分区,  序列号)</p><p>幂等性    =&gt; 指的是单分区, 但绘画数据不丢不重复</p><p>事务        =&gt; </p><ul><li>初始化事务</li><li>开启事务</li><li>提交事务</li><li>终止事务</li><li>offset提交事务</li></ul><h2 id="Broker-gt-消费者"><a href="#Broker-gt-消费者" class="headerlink" title="Broker  ==&gt; 消费者"></a>Broker  ==&gt; 消费者</h2><p>事务</p><h1 id="积压了"><a href="#积压了" class="headerlink" title="积压了"></a>积压了</h1><ol><li><p>增加分区数量</p><blockquote><p>bin/kafka-topic.sh –bootstrap-server Hadoop102:9092 –alter –topic first  –partitions  6</p></blockquote></li><li><p>kafka的分区增加了, 但是对应的消费者并没有增加, 这里我们要增加对应cpu数量, 和kafka的分区数相对应, 进行消费数据</p></li><li><p>调高消费者每批次抓取条数大小, 默认为500条, 默认批次大小为55m, 可以尝试提高批次大小和处理批次的条数, 增加吞吐量.</p></li></ol><h1 id="乱序了"><a href="#乱序了" class="headerlink" title="乱序了"></a>乱序了</h1><ul><li><p>kafka  1.x</p><p>不需要考虑是否开启幂等性</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection = 1</span><br></pre></td></tr></table></figure></li><li><p>kafka  1.x以后的版本</p><p>在未开启幂等性的情况下, 和1.x的版本一样处理</p><p>在开启幂等性的情况下, 会缓存producer发来的最近5个request的数据</p><p>需要设置缓存的请求个数小于等于5个, 会在服务器端从新排序</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">max.in.flight.requests.per.connection # 设置参数小于等于5</span><br></pre></td></tr></table></figure></li></ul><h1 id="做了哪些优化"><a href="#做了哪些优化" class="headerlink" title="做了哪些优化"></a>做了哪些优化</h1><h1 id="杂七杂八"><a href="#杂七杂八" class="headerlink" title="杂七杂八"></a>杂七杂八</h1><h1 id="提高吞吐量"><a href="#提高吞吐量" class="headerlink" title="提高吞吐量"></a>提高吞吐量</h1><h1 id="为什么能做到高校读写"><a href="#为什么能做到高校读写" class="headerlink" title="为什么能做到高校读写"></a>为什么能做到高校读写</h1>]]></content>
+        <content type="html"><![CDATA[<h2 id="快排"><a href="#快排" class="headerlink" title="快排"></a>快排</h2><h2 id="归并"><a href="#归并" class="headerlink" title="归并"></a>归并</h2>]]></content>
       
       
       <categories>
           
           <category> Interview </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Kafka </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>Flink-介绍与架构</title>
-      <link href="/2010/12/12/Flink-%E4%BB%8B%E7%BB%8D%E4%B8%8E%E6%9E%B6%E6%9E%84/"/>
-      <url>/2010/12/12/Flink-%E4%BB%8B%E7%BB%8D%E4%B8%8E%E6%9E%B6%E6%9E%84/</url>
-      
-        <content type="html"><![CDATA[<p>参考引用链接: </p><ul><li><a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">分布式快照算法: Chandy-Lamport</a></li><li>五分钟学大数据微信公众号</li><li>尚硅谷大数据学习文档</li><li>Flink1.13官方文档</li></ul><h1 id="Flink流式处理的简介"><a href="#Flink流式处理的简介" class="headerlink" title="Flink流式处理的简介"></a>Flink流式处理的简介</h1><h2 id="Flink是什么"><a href="#Flink是什么" class="headerlink" title="Flink是什么"></a>Flink是什么</h2><p>Apache Flink是一个框架和分布式处理引擎, 对于有界流和无界流进行状态计算.</p><h2 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h2><ol><li>支持高吞吐, 低延时, 高性能的处理</li><li>支持带有事件时间的窗口操作</li><li>支持有状态计算的Exactly-once语义</li><li>支持高度灵活的窗口操作, 支持基于time, count, session 以及 data-driven的操作</li><li>支持具有Backpressure功能的持续流模型</li><li>支持基于轻量级分布式快照 snapshot实现的容错</li><li>一个运行时同时支持batch on streaming处理和streaming处理</li><li>Flink支持在jvm内部实现了自己的内存管理</li><li>支持迭代计算</li><li>支持程序自动化: 避免特定情况下shuffle, 排序等昂贵操作, 中间结果有必要进行缓存</li></ol><h2 id="Flink基石"><a href="#Flink基石" class="headerlink" title="Flink基石"></a>Flink基石</h2><p>Flink之所以这么流畅, 离不开它最重要的四个基石 : CheckPoint, State, Time, Window</p><h3 id="CheckPoint"><a href="#CheckPoint" class="headerlink" title="CheckPoint"></a>CheckPoint</h3><p>CheckPoint机制, 这是Flink最重要的一个特性, Flink基于Chandy-Lamport算法实现了一个分布式的一致性快照, 从而提供了一致性的语义. <a href="https://github.com/legendtkl/paper_reading/blob/main/realtime-compute/Chandy-Lamport.md">Chandy-Lamport</a>算法是在1985年的时候被提出来了, 但是并没有被很广泛的应用, 而Flink则是将这个算法发扬光大了</p><blockquote><p>Chandy-Lamport</p><p> Spark 的 Structured Streaming 的 Continuous Processing Mode 的容错处理使用了分布式快照（Distributed Snapshot）算法 Chandy-Lamport 算法</p></blockquote><h3 id="State"><a href="#State" class="headerlink" title="State"></a>State</h3><p>提供了一致性的语义之后, 为了更加轻松的管理状态, 提供了一套简单明了的状态API, 里面提供了ValueState, ListState, MapState, BroadCastState等, 使得State API能够自动的享受一致性的语义</p><h3 id="Watermark"><a href="#Watermark" class="headerlink" title="Watermark"></a>Watermark</h3><p>能够支持基于时间的时间的处理, 或者说基于系统时间的处理, 能够容忍数据的延时, 容忍数据的迟到, 容忍乱序的数据</p><h3 id="Window"><a href="#Window" class="headerlink" title="Window"></a>Window</h3><p>Flink提供了开箱即用的各种窗口, 比如滑动窗口, 滚动窗口, 会话窗口以及非常灵活的自定义的窗口</p><h2 id="批处理和流处理"><a href="#批处理和流处理" class="headerlink" title="批处理和流处理"></a>批处理和流处理</h2><p>Flink分别提供了面向流式处理的接口(Data Stream API)和面向批处理的(DataSet API), 因此Flink既可以完成流式处理, 也可以完成批处理</p><h1 id="Flink运行架构"><a href="#Flink运行架构" class="headerlink" title="Flink运行架构"></a>Flink运行架构</h1><h2 id="架构对比"><a href="#架构对比" class="headerlink" title="架构对比"></a>架构对比</h2><h3 id="HDFS主从架构"><a href="#HDFS主从架构" class="headerlink" title="HDFS主从架构"></a>HDFS主从架构</h3><pre class="mermaid">graph LR    A[NameNode] --> B[DataNode]    A --> C[DataNode]    A --> D[DataNode]</pre><h3 id="Spark架构"><a href="#Spark架构" class="headerlink" title="Spark架构"></a>Spark架构</h3><pre class="mermaid">graph LR     A[Driver] --> B[Executer]    A --> C[Executer]    A --> D[Executer]</pre><h3 id="Flink架构"><a href="#Flink架构" class="headerlink" title="Flink架构"></a>Flink架构</h3><p>Flink运行时由两种类型组成, 一个JobManager(作业管理器, Master进程)和一个或者多个TaskManager组成(任务管理器, slave进程)</p><pre class="mermaid">graph LR    A[JobManager] --> B[TaskManager]    A --> C[TaskManager]    A --> D[TaskManager]</pre><h2 id="Flink程序结构"><a href="#Flink程序结构" class="headerlink" title="Flink程序结构"></a>Flink程序结构</h2><p>Flink程序的基本结构块是流和转换, 从概念上讲, 流是数据记录的流, 而转换是将一个或者多个流作为一份或对各流的操作, 输入, 并产生一个或者多个数据流</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/image-20211112091257543.png"></p><h3 id="Source"><a href="#Source" class="headerlink" title="Source"></a>Source</h3><p>Source: 数据源, Flink在流处理和批处理的source大概有4类</p><blockquote><p>基于本地集合的Source</p><p>基于文件的Source</p><p>基于网络套接字的Source</p><p>自定义的Source</p></blockquote><p>自定义的Source常见的又Apache kafka, RabbitMQ等, 当然也可以定义自己的Source</p><h3 id="Transformation"><a href="#Transformation" class="headerlink" title="Transformation"></a>Transformation</h3><p>数据转化的各种操作, 又Map/FlatMap/Filter/KeyBy/Reduce/Fold/Aggregations/Window/WindowAll/Union/Window join/Split/Select等, 操作很多, 可以将数据转换计算成为你想要的数据</p><h3 id="Sink"><a href="#Sink" class="headerlink" title="Sink"></a>Sink</h3><p>接收器, Flink将转换计算后的数据发送的地点, 需要存储数据. Flink常见的Sink有如下几类: </p><ul><li>写入文件</li><li>控制台打印</li><li>写入socket</li><li>自定义sink</li></ul><p>自定义sink常见的有Apache kafka, RabbitMQ, MySQL,ElasticSearch, Apache Cassandra, HDFS等等, 我们也可以自定义属于自己的sink</p><h2 id="Flink并行数据流"><a href="#Flink并行数据流" class="headerlink" title="Flink并行数据流"></a>Flink并行数据流</h2><p>Flink程序在运行的时候, 会被映射成为一个StreamingDataflow, 一个Streaming Dataflow是一组Stream和Transformation Operator组成的. 在启动的时候从一个或者多个SourceOperator开始, 结束语一个或者多个Sink Operator.</p><h3 id="并行和分布式"><a href="#并行和分布式" class="headerlink" title="并行和分布式"></a>并行和分布式</h3><p><strong>Flink程序的本质上是并行的和分布式的,</strong> 在执行的过程中, 一个流(stream)包含一个或者多个流的分区, 而每一个operator包含一个或者多个operator子任务. 操作子任务之间是彼此独立的, 在不同的线程中执行, 甚至是在不同的机器或者不同的容器上. 而operator子任务的数量是这一特定Operator并行度. 相同程序中的不同operator有不同级别的并行度.</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20211113141754.jpg"></p><p>一个Stream可以被分成多个Stream的分区, 也就是Stream Partition. 一个Operator也可以被分为多个Operator Subtask, 如图所示. Source被分成Source1和Source2, 它们分别是Source的Operator Subtask. <strong>每一个Operator Subtask都是在不同的线程当中独立运行的</strong>. 一个Operator的并行度, 就等于Operator Subtask的个数, 上图Source的并行度为2, 而一个Stream的并行度就等于它生成Operator的并行度</p><h3 id="One-to-One"><a href="#One-to-One" class="headerlink" title="One to One"></a>One to One</h3><p>两个operator用此模式传递的时候, 会保持数据的分区和数据的排序, 如上图的Source1到Map1, 它就会保留Source的分区特性, 以及分区元素处理的有序性.</p><h3 id="Redistributing"><a href="#Redistributing" class="headerlink" title="Redistributing"></a>Redistributing</h3><p>重新分配模式, 这种模式或改变数据的分区, 每一个operator subtask 会根据选择的transformation将数据发送到不同的目标subtasks, 比如keyBy()会通过hashcode重新分区, broadcast() 和 rebalance() 方法会随机重新分区.</p><h2 id="Task和-Operator-chain"><a href="#Task和-Operator-chain" class="headerlink" title="Task和 Operator chain"></a>Task和 Operator chain</h2><p>Flink的所有操作都称之为Operator, 客户端在提交任务的时候会对Operator进行优化操作, 能进行合并的Operator会被合并为一个Operator, <strong>合并后的Operator称为Operator chain, 实际上就是一个执行链, 每个执行链会在TaskManager上独立的线程中执行.</strong></p><p>对于分布式执行， Flink将算子的subtasks链接成为task。每个Task由一个线程执行， 将算子链接成为Task是个有用的优化：</p><blockquote><p>减少了线程间之间的切换， 缓冲的开销， 并且减少延迟的同时提升整体的吞吐量，链行为是可以配置的</p></blockquote><p>使用了5个SubTask执行， 因此存在5个<strong>并行</strong>的线程</p><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tasks_chains.svg"></p><h2 id="Flink任务调度与执行"><a href="#Flink任务调度与执行" class="headerlink" title="Flink任务调度与执行"></a>Flink任务调度与执行</h2><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/processes.svg"></p><ol><li>Flink Program会将Program Dataflow通过Graph Builder构建Dataflow Graph</li><li>ActorSystem创建Actor将数据流图发送给JobManager中的Actor</li><li>JobManage会不断接受TaskManager的心跳信息, 从而可以获取到有效的TaskManager</li><li>JobManager通过调度器在TaskManager中调度执行Task(在Fllink中中最小的调度单元就是Task, 对应就是一个线程)</li><li>在程序运行的过程中, task与task之间是可以进行数据传输的</li></ol><blockquote><p>Client并不是运行时和程序执行的一部分， 而是用于准备数据流并将其发送给JobManager。 之后， 客户端可以断开链接（分离模式）， 或者保持链接来接受进程报告（附加模式）。</p><p>客户端可以作为出发执行Java/Scala程序的一部分运行， 亦可以在命令行进程<code>./bin/flink run ...</code>中运行</p><p>可以通过多种方式启动JobManager和TaskManager：</p><p>直接在机器上作为standalone集群启动， 在容器中启动， 或者通过yarn或者mesos等资源框架管理并启动， TaskManager连接到JobManager, 宣布自己可用， 并分配工作</p></blockquote><h3 id="JobClient"><a href="#JobClient" class="headerlink" title="JobClient"></a>JobClient</h3><ol><li>主要工作是提交任务, 提交之后可以结束进程, 也可以等待结果返回</li><li>JobClient不是Flink程序执行的内部部分, 但它是任务执行的起点</li><li>JobClient负责接受用户的程序代码, 然后创建数据流, 将数据流提交给JobManager以便进一步执行, 执行完毕之后, JobClient将结果返回给客户</li></ol><h3 id="JobManager"><a href="#JobManager" class="headerlink" title="JobManager"></a>JobManager</h3><p>作业管理器就是一个JVM进程, 其中包含三类线程</p><p>:chestnut:三类线程</p><ul><li>ResurceManager： Flink的资源管理器， 资源是任务插槽（Task Slot）</li><li>Dispatcher： 分发器，提供了Rest接口， 用于提交Flink应用程序， 并为每个Flink的应用程序启动一个新的JobMaster. 它还运行了FlinkWebUI用来提供作业的执行信息</li><li>JobMaster: 每个作业（Job）对应一个，负责管理单个JobGraph的执行， Flink中可以同时运行多个作业， 每个作业都有自己的JobMaster</li></ul><pre class="mermaid">graph LR    A[JobManager] --> B([ResourceManager])    A --> C([Dispatcher])    A --> D([JobMaster])</pre><p>:one:主要职责是调度工作并协调任务检查点</p><p>:two:集群中至少要存在一个master, master负责调度task, 协调checkpoints和容错</p><p>:three:高可用设置的话可以有多个master, 但是保证一个是leader, 其他是standby</p><p>:four:JobManager包含Actor System, Scheduler, CheckPoint三个重要的组件</p><p>:five:JobManager从客户端接收到任务之后, 首先生成优化过的执行计划, 再调度到TaskManager中进行执行</p><h3 id="TaskManager"><a href="#TaskManager" class="headerlink" title="TaskManager"></a>TaskManager</h3><ul><li>TaskSlot： 任务插槽， 是一个物理分区</li><li>不同的任务插槽就是不同的物理分区</li><li>每个任务插槽是一个内存分片</li><li>内存的本质是字节数组</li></ul><pre class="mermaid">graph LR    A[TaskManager] --> B([Task Slot])    A --> C([Task Slot])    A --> D([Task Slot])</pre><p>:one:主要职责是从JobManager处接收任务, 并部署启动, 接受上游的数据并处理</p><p>:two:TaskManager是在JVM中的一个或者多个线程中执行任务的工作节点</p><p>:three:TaskManager在创建之处就设置好了Slot, 每个Slot可以执行一个任务</p><h2 id="任务槽和槽共享"><a href="#任务槽和槽共享" class="headerlink" title="任务槽和槽共享"></a>任务槽和槽共享</h2><p><img src="https://cdn.jsdelivr.net/gh/quietCC/imageBed/img/tasks_slots.svg"></p><p>每个TaskManager是一个JVM进程， 可以在不同的线程中执行一个或者多个子任务。 为了控制一个TaskManager能够接受多少个task。 TaskManager通过task slot进行控制， 一个TaskManager至少拥有一个task slot</p><h3 id="任务槽"><a href="#任务槽" class="headerlink" title="任务槽"></a>任务槽</h3><p>每个task slot表示TaskManager表示资源的一个固定大小的子集</p><p>Flink将进程的内存划分到多个slot中。</p><p>途中有两个TaskManager， 每个TaskManager有3个slot， 每个slot占用1/3的内存</p><p>内存被划分到不同的slot之后可以获得如下好处：</p><p>:one:TaskManager最多能同时并发执行的任务是可以控制的， 那就是3个， 因为不能超过slot的数量</p><p>:two:slot有独占的内存空间， 这样在一个TaskManager中可以运行多个不同的作业， 作业之间不会受到影响。</p><h3 id="槽共享"><a href="#槽共享" class="headerlink" title="槽共享"></a>槽共享</h3><p>默认情况下， Flink允许子任务共享插槽， 即使它们是不同task的subtask， 只要它们来自于同一个作业， 结果是一个slot可以保存作业的整个管道。 允许插槽共享有两个主要的好处：</p><p>:one:只需要计算Job最高并行度（parallelism）的task slot， 只要这个满足， 其他的job也可以满足</p><p>:two:资源分配更加的公平， 如果有比较空闲的slot可将更多的任务分配给他。 图中若没有任务槽共享， 负载不高的Source/Map等subtask将会占据许多的资源， 而负载较高的窗口subtask则会缺乏资源</p><p>:three:有了任务槽共享， 可以将基本并行度（base parallelism）从2提升至6， 提高了分配资源的利用率。 同时还可以保障TaskManager给subtask分配的slot方案更加的公平</p><h3 id="不同的DAG结构-有争议"><a href="#不同的DAG结构-有争议" class="headerlink" title="不同的DAG结构(有争议)"></a>不同的DAG结构(有争议)</h3><pre class="mermaid">graph LR    StreamGraph -->|客户端| JobGraph -->|作业管理器| ExecutionGraph -->|部署| PhysicalGraph</pre><ul><li><p>StreamGraph: 是根据用户通过Stream API编写的代码生成的最初的图, 用来表示程序的拓扑结构</p></li><li><p>JobGraph: StreamGraph 在编译阶段经过优化之后生成了JobGraph, 提交给JobManager的数据结构. 主要的有华为, 将多个符合条件(窄依赖, 没有shuffle, 并行度相同)的算组串联在一起作为一个节点, 保证串联起来的节点里面所有的算子都在同一个任务插槽执行, 这样算子之间的数据就是本地转发的(无序序列化和网络io), 需要两个条件</p><blockquote><ul><li>两个算子之间没有shuffle的存在</li><li>两个算子的并行度必须相同</li></ul></blockquote></li><li><p>ExecutionGraph: JobManager根据JobGraph生成ExecutionGraph, ExecutionGraph是JobGraph的并行化版本, 是调度曾最核心的数据结构</p></li><li><p>PhysicalGraph: JobManager根据ExecutionGraph对job进行调度之后, 在各个TaskManager上部署Task后形成的图 , 并不是具体的数据结构</p></li></ul>]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
           
       </categories>
       
@@ -469,31 +494,6 @@
         <tags>
             
             <tag> Hadoop </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>Interview-FLink</title>
-      <link href="/2010/12/12/Interview-Leetcode/"/>
-      <url>/2010/12/12/Interview-Leetcode/</url>
-      
-        <content type="html"><![CDATA[<h2 id="快排"><a href="#快排" class="headerlink" title="快排"></a>快排</h2><h2 id="归并"><a href="#归并" class="headerlink" title="归并"></a>归并</h2>]]></content>
-      
-      
-      <categories>
-          
-          <category> Interview </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Flink </tag>
             
         </tags>
       
@@ -571,31 +571,6 @@
     
     
     <entry>
-      <title>Redis</title>
-      <link href="/2010/12/12/Redis/"/>
-      <url>/2010/12/12/Redis/</url>
-      
-        <content type="html"><![CDATA[<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><ul><li>redis是一个开源的key-value存储系统</li><li>和memcached一样的, 为了保证数据的效率, 所以数据保存在内存中</li><li>和memcached类似, 它支持的存储的value类型更加的多, 包括string, list, set, zset</li></ul>]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Redis </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
       <title>Netty, Redis, Zookeeper高并发实战(阅读中)</title>
       <link href="/2010/12/12/Netty,%20Redis,%20Zookeeper%E9%AB%98%E5%B9%B6%E5%8F%91%E5%AE%9E%E6%88%98,%20/"/>
       <url>/2010/12/12/Netty,%20Redis,%20Zookeeper%E9%AB%98%E5%B9%B6%E5%8F%91%E5%AE%9E%E6%88%98,%20/</url>
@@ -614,9 +589,9 @@
             
             <tag> Zookeeper </tag>
             
-            <tag> Redis </tag>
-            
             <tag> Netty </tag>
+            
+            <tag> Redis </tag>
             
             <tag> 同步 </tag>
             
@@ -625,6 +600,31 @@
             <tag> 阻塞 </tag>
             
             <tag> 非阻塞 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Redis</title>
+      <link href="/2010/12/12/Redis/"/>
+      <url>/2010/12/12/Redis/</url>
+      
+        <content type="html"><![CDATA[<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><ul><li>redis是一个开源的key-value存储系统</li><li>和memcached一样的, 为了保证数据的效率, 所以数据保存在内存中</li><li>和memcached类似, 它支持的存储的value类型更加的多, 包括string, list, set, zset</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 大数据 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Redis </tag>
             
         </tags>
       
@@ -710,6 +710,37 @@
     
     
     <entry>
+      <title>广告数仓</title>
+      <link href="/2010/12/12/%E5%B9%BF%E5%91%8A%E6%95%B0%E4%BB%93/"/>
+      <url>/2010/12/12/%E5%B9%BF%E5%91%8A%E6%95%B0%E4%BB%93/</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+      
+      <categories>
+          
+          <category> 大数据 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ClickHouse </tag>
+            
+            <tag> Hadoop </tag>
+            
+            <tag> Hive </tag>
+            
+            <tag> Spark </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Azkaban</title>
       <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Azkaban/"/>
       <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Azkaban/</url>
@@ -752,37 +783,6 @@
         <tags>
             
             <tag> DataX </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>广告数仓</title>
-      <link href="/2010/12/12/%E5%B9%BF%E5%91%8A%E6%95%B0%E4%BB%93/"/>
-      <url>/2010/12/12/%E5%B9%BF%E5%91%8A%E6%95%B0%E4%BB%93/</url>
-      
-        <content type="html"><![CDATA[]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> ClickHouse </tag>
-            
-            <tag> Hadoop </tag>
-            
-            <tag> Hive </tag>
-            
-            <tag> Spark </tag>
             
         </tags>
       
@@ -866,31 +866,6 @@
     
     
     <entry>
-      <title>HDFS</title>
-      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HDFS/"/>
-      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HDFS/</url>
-      
-        <content type="html"><![CDATA[]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> HDFS </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
       <title>HBase</title>
       <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HBase/"/>
       <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HBase/</url>
@@ -908,6 +883,31 @@
         <tags>
             
             <tag> HBase </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>HDFS</title>
+      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HDFS/"/>
+      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-HDFS/</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+      
+      <categories>
+          
+          <category> 大数据 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> HDFS </tag>
             
         </tags>
       
@@ -941,19 +941,25 @@
     
     
     <entry>
-      <title>IDEA配置信息</title>
-      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-IDEA-%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF/"/>
-      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-IDEA-%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF/</url>
+      <title>Hudi</title>
+      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Hudi/"/>
+      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Hudi/</url>
       
-        <content type="html"><![CDATA[<h2 id="自定义模板"><a href="#自定义模板" class="headerlink" title="自定义模板"></a>自定义模板</h2>]]></content>
+        <content type="html"><![CDATA[]]></content>
       
       
       <categories>
           
-          <category> 工具 </category>
+          <category> 大数据 </category>
           
       </categories>
       
+      
+        <tags>
+            
+            <tag> Hudi </tag>
+            
+        </tags>
       
     </entry>
     
@@ -977,31 +983,6 @@
         <tags>
             
             <tag> Kafka </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>Hudi</title>
-      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Hudi/"/>
-      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Hudi/</url>
-      
-        <content type="html"><![CDATA[]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Hudi </tag>
             
         </tags>
       
@@ -1054,6 +1035,25 @@
             <tag> Kylin </tag>
             
         </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IDEA配置信息</title>
+      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-IDEA-%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF/"/>
+      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-IDEA-%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF/</url>
+      
+        <content type="html"><![CDATA[<h2 id="自定义模板"><a href="#自定义模板" class="headerlink" title="自定义模板"></a>自定义模板</h2>]]></content>
+      
+      
+      <categories>
+          
+          <category> 工具 </category>
+          
+      </categories>
+      
       
     </entry>
     
@@ -1231,6 +1231,25 @@
     
     <entry>
       <title>模板</title>
+      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Sqoop/"/>
+      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Sqoop/</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+      
+      <categories>
+          
+          <category> 大数据 </category>
+          
+      </categories>
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>模板</title>
       <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Spark/"/>
       <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Spark/</url>
       
@@ -1252,25 +1271,6 @@
       <title>模板</title>
       <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Yarn/"/>
       <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Yarn/</url>
-      
-        <content type="html"><![CDATA[]]></content>
-      
-      
-      <categories>
-          
-          <category> 大数据 </category>
-          
-      </categories>
-      
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>模板</title>
-      <link href="/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Sqoop/"/>
-      <url>/2010/12/12/%E5%BE%85%E8%A1%A5%E5%85%85-Sqoop/</url>
       
         <content type="html"><![CDATA[]]></content>
       
